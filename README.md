@@ -66,11 +66,14 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 ## Current Milestone
 
-Current package version: `0.2.1`.
+Current package version: `0.2.2`.
 
 M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM and RAG behavior are still under development.
 
 `v0.2.1` is a documentation patch that adds README architecture and roadmap diagrams.
+
+`v0.2.2` is a documentation patch that records the maintained agent
+orchestration and domestic model defaults in `docs/agent-orchestration.md`.
 
 ## Repository Layout
 
