@@ -27,6 +27,24 @@ class QAReportTest(unittest.TestCase):
             "review team approved it this way", report.findings[0].evidence.lower()
         )
 
+    def test_report_findings_do_not_depend_on_expected_risks_fixture_field(self):
+        conversation = load_conversation(
+            Path("examples/conversations/claim-amount-dispute.json")
+        )
+        conversation_without_expected = type(conversation)(
+            id=conversation.id,
+            scenario=conversation.scenario,
+            messages=conversation.messages,
+            expected_risks=[],
+        )
+
+        report = generate_qa_report(conversation_without_expected, load_rule_catalog())
+
+        self.assertEqual(
+            [finding.rule_id for finding in report.findings],
+            ["SEM-002", "SEM-003", "RAG-001"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
