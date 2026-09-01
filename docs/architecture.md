@@ -23,3 +23,5 @@ src/claimguard/              application package
 tests/                       automated checks
 ```
 
+See `docs/agent-orchestration.md` for the maintained agent topology, domestic
+model defaults, and update policy.
