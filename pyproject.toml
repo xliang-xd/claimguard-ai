@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claimguard-ai"
+version = "0.1.0"
+description = "Insurance text customer service Copilot and AI quality assurance system."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name = "Lmu-xd" }
+]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+claimguard = ["data/*.json"]
+

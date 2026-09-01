@@ -1,0 +1,124 @@
+[
+  {
+    "id": "SEM-001",
+    "name": "Counter-questioning the customer",
+    "category": "semantic",
+    "risk_level": "critical",
+    "detection": "llm judge",
+    "judgment": "Detect whether the agent challenges, negates, or responds to the customer in a confrontational question form.",
+    "outputs": ["violation", "evidence", "reason"],
+    "test_focus": "Separate legitimate clarification questions from hostile counter-questioning."
+  },
+  {
+    "id": "SEM-002",
+    "name": "Answer does not address customer intent",
+    "category": "semantic",
+    "risk_level": "critical",
+    "detection": "intent + llm judge",
+    "judgment": "Compare the customer's main intent with the agent response and judge whether the response addresses the actual issue.",
+    "outputs": ["customer_intent", "relevance", "evidence"],
+    "test_focus": "Cover partial answers, topic shifts, and superficially related responses."
+  },
+  {
+    "id": "SEM-003",
+    "name": "Impatient service tone",
+    "category": "semantic",
+    "risk_level": "critical",
+    "detection": "llm judge",
+    "judgment": "Identify dismissive, passive-aggressive, impatient, or perfunctory language in customer service replies.",
+    "outputs": ["violation", "evidence", "reason"],
+    "test_focus": "Avoid flagging short neutral answers as impatient."
+  },
+  {
+    "id": "SEM-004",
+    "name": "Complaint not acknowledged or soothed",
+    "category": "semantic",
+    "risk_level": "critical",
+    "detection": "intent + llm judge",
+    "judgment": "When the customer expresses clear dissatisfaction, judge whether the agent acknowledges the complaint and provides an appropriate appeasement response.",
+    "outputs": ["complaint_detected", "appeasement_detected", "evidence"],
+    "test_focus": "Detect implicit complaints as well as direct complaints."
+  },
+  {
+    "id": "SEM-005",
+    "name": "Unapproved commitment",
+    "category": "semantic",
+    "risk_level": "critical",
+    "detection": "llm judge",
+    "judgment": "Detect definite commitments about claim outcome, payment time, or policy coverage when the context remains uncertain.",
+    "outputs": ["commitment", "evidence", "uncertainty_context"],
+    "test_focus": "Distinguish estimated or conditional language from guaranteed commitments."
+  },
+  {
+    "id": "PROC-001",
+    "name": "Incomplete identity disclosure",
+    "category": "process",
+    "risk_level": "high",
+    "detection": "rule + llm",
+    "judgment": "Check whether the opening stage includes required identity disclosure elements.",
+    "outputs": ["required_elements", "missing_elements", "evidence"],
+    "test_focus": "Accept varied wording when the required meaning is complete."
+  },
+  {
+    "id": "PROC-002",
+    "name": "Missing closing statement",
+    "category": "process",
+    "risk_level": "low",
+    "detection": "rule + llm",
+    "judgment": "Check whether the conversation ends with a suitable closing expression when the interaction reaches a normal ending.",
+    "outputs": ["present", "missing", "evidence"],
+    "test_focus": "Separate normal endings from abnormal interruptions."
+  },
+  {
+    "id": "RAG-001",
+    "name": "Claim amount dispute: deductible",
+    "category": "knowledge_grounded",
+    "risk_level": "medium",
+    "detection": "rag + llm judge",
+    "judgment": "Judge whether the agent explains the deductible and its effect on the claim amount in a way consistent with the policy clause.",
+    "outputs": ["clause", "completeness", "correctness"],
+    "test_focus": "Compare correct, incomplete, and incorrect deductible explanations."
+  },
+  {
+    "id": "RAG-002",
+    "name": "Pre-policy or waiting-period treatment denial",
+    "category": "knowledge_grounded",
+    "risk_level": "medium",
+    "detection": "rag + llm judge",
+    "judgment": "Judge whether the agent uses the applicable waiting-period clause to explain why the claim may be denied.",
+    "outputs": ["clause", "reason", "missing_elements"],
+    "test_focus": "Cover different waiting-period scenarios."
+  },
+  {
+    "id": "RAG-003",
+    "name": "Disease outside policy coverage",
+    "category": "knowledge_grounded",
+    "risk_level": "medium",
+    "detection": "rag + llm judge",
+    "judgment": "Judge whether the agent explains why a disease is outside policy coverage instead of merely saying it is not covered.",
+    "outputs": ["coverage_clause", "correctness", "evidence"],
+    "test_focus": "Flag unsupported denial statements that omit coverage rationale."
+  },
+  {
+    "id": "RAG-004",
+    "name": "Accident definition explanation",
+    "category": "knowledge_grounded",
+    "risk_level": "medium",
+    "detection": "rag + llm judge",
+    "judgment": "Judge whether the agent explains the applicable definition of accident rather than only giving examples.",
+    "outputs": ["expected_elements", "missing_elements", "evidence"],
+    "test_focus": "Compare full definitions with example-only answers."
+  },
+  {
+    "id": "RAG-005",
+    "name": "Dynamic clause citation for pet insurance denial",
+    "category": "knowledge_grounded",
+    "risk_level": "high",
+    "detection": "intent + rag + citation judge",
+    "judgment": "Find and cite the concrete clause that matches the current denial reason, then judge whether the explanation is grounded in that clause.",
+    "outputs": ["retrieved_clause", "citation_accuracy", "explanation"],
+    "test_focus": "Use as the V1 hero case for retrieval, citation, and answer quality.",
+    "hero_case": true
+  }
+]
+

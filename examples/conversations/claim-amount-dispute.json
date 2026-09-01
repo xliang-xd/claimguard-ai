@@ -1,0 +1,24 @@
+{
+  "id": "claim-amount-dispute-001",
+  "scenario": "Customer disputes a low pet insurance claim payout.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "My pet hospital stay cost 1800, so why did you only reimburse 800?"
+    },
+    {
+      "role": "agent",
+      "content": "The review team approved it this way. That is the final result."
+    },
+    {
+      "role": "customer",
+      "content": "But what is the actual reason?"
+    },
+    {
+      "role": "agent",
+      "content": "I do not know the details. The result is just like this."
+    }
+  ],
+  "expected_risks": ["SEM-002", "SEM-003", "RAG-001"]
+}
+

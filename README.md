@@ -1,0 +1,95 @@
+# ClaimGuard AI
+
+Insurance text customer service Copilot and AI quality assurance system.
+
+ClaimGuard AI is a focused GitHub demo project for text-based insurance service. It does not handle calls, ASR, speaker diarization, OCR, video, or outbound dialing. V1 concentrates on two inputs:
+
+1. A customer message currently being handled by an online service agent.
+2. A completed text conversation that needs quality inspection.
+
+## V1 Product
+
+### Customer Service Copilot
+
+The Copilot workflow helps an agent answer a customer during an active chat.
+
+- Detect customer intent, such as claim amount dispute, denial explanation, policy clause lookup, or complaint.
+- Retrieve relevant insurance knowledge.
+- Draft a clear, compliant, clause-grounded reply.
+- Warn the agent about risky phrases, unsupported commitments, and impatient wording.
+
+### Quality Assurance
+
+The QA workflow reviews completed conversations.
+
+- Produce a quality score.
+- Run semantic, process, and knowledge-grounded rules.
+- Show violated rule IDs, risk levels, evidence, and reasoning.
+- Suggest a better reply grounded in the correct policy clause.
+
+## V1 Rule Matrix
+
+| Rule ID | Rule | Category | Risk | Detection |
+| --- | --- | --- | --- | --- |
+| SEM-001 | Counter-questioning the customer | Semantic | Critical | LLM judge |
+| SEM-002 | Answer does not address customer intent | Semantic | Critical | Intent + LLM judge |
+| SEM-003 | Impatient service tone | Semantic | Critical | LLM judge |
+| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Intent + LLM judge |
+| SEM-005 | Unapproved commitment | Semantic | Critical | LLM judge |
+| PROC-001 | Incomplete identity disclosure | Process | High | Rule + LLM |
+| PROC-002 | Missing closing statement | Process | Low | Rule + LLM |
+| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | RAG + LLM judge |
+| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | RAG + LLM judge |
+| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | RAG + LLM judge |
+| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | RAG + LLM judge |
+| RAG-005 | Dynamic clause citation for pet insurance denial | Knowledge-grounded | High | Intent + RAG + Citation judge |
+
+`RAG-005` is the V1 hero case because it demonstrates intent routing, retrieval, citation accuracy, and grounded answer quality in one scenario.
+
+## Technical Direction
+
+V1 should stay small and explicit:
+
+```text
+Router
+  -> Knowledge workflow: RAG, citation grounding, answer drafting
+  -> QA workflow: rule selection, judgment, evidence, scoring
+```
+
+The project should show product judgment, not agent sprawl. A compact workflow is easier to explain, test, and extend than a large multi-agent graph.
+
+## Repository Layout
+
+```text
+docs/                       product scope and architecture notes
+data/knowledge/             synthetic policy fixtures
+examples/conversations/     demo conversation fixtures
+src/claimguard/             Python package
+tests/                      automated tests
+```
+
+## Quick Start
+
+Run the current smoke test:
+
+```bash
+python3 -m unittest tests/test_rule_catalog.py
+```
+
+Load the V1 rule catalog:
+
+```python
+from claimguard.rules import load_rule_catalog
+
+catalog = load_rule_catalog()
+print(catalog.get("RAG-005").name)
+```
+
+## Roadmap
+
+- Add a CLI command for running QA on a conversation fixture.
+- Add a retrieval layer over synthetic insurance policy clauses.
+- Add structured QA output with evidence, cited clauses, and suggested replies.
+- Add a lightweight web demo with Copilot and QA pages.
+- Add evaluation fixtures for false positives, missing citations, and incomplete explanations.
+
