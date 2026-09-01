@@ -58,6 +58,12 @@ Router
 
 The project should show product judgment, not agent sprawl. A compact workflow is easier to explain, test, and extend than a large multi-agent graph.
 
+## Current Milestone
+
+Current package version: `0.2.0`.
+
+M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM and RAG behavior are still under development.
+
 ## Repository Layout
 
 ```text
