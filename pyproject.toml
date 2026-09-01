@@ -19,3 +19,5 @@ where = ["src"]
 [tool.setuptools.package-data]
 claimguard = ["data/*.json"]
 
+[project.scripts]
+claimguard = "claimguard.cli:main"
