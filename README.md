@@ -68,6 +68,16 @@ src/claimguard/             Python package
 tests/                      automated tests
 ```
 
+## Versioning
+
+Release tags use `vX.Y.Z`.
+
+- Small fixes use `v0.0.Z` style patch bumps.
+- Larger feature milestones use `v0.Y.0` minor bumps.
+- Major `vX.0.0` releases are reserved for genuinely deliverable demo milestones.
+
+See `docs/versioning.md` for the project policy.
+
 ## Quick Start
 
 Run the current QA CLI demo:
