@@ -12,11 +12,11 @@ ClaimGuard AI uses Git release tags in the form `vX.Y.Z`.
 
 - M1 QA CLI is a feature milestone, so it fits the `v0.1.0` level.
 - M2 deterministic rule runner is a larger capability upgrade, so it should move the project to `v0.2.0` when merged.
-- Patch-only follow-ups after M2 should use `v0.2.1`, `v0.2.2`, and so on.
+- README architecture and roadmap diagrams are documentation improvements, so they fit `v0.2.1`.
+- Patch-only follow-ups after this should use `v0.2.2`, `v0.2.3`, and so on.
 
 ## Practical Rules
 
-- Python package metadata uses PEP 440 versions without the leading `v`, such as `0.2.0`.
-- Git tags and GitHub release names use the leading `v`, such as `v0.2.0`.
+- Python package metadata uses PEP 440 versions without the leading `v`, such as `0.2.1`.
+- Git tags and GitHub release names use the leading `v`, such as `v0.2.1`.
 - Do not create a `v1.0.0` release until ClaimGuard has a usable end-to-end demo with documented setup, example data, tests, and a clear user workflow.
-

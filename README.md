@@ -7,6 +7,12 @@ ClaimGuard AI is a focused GitHub demo project for text-based insurance service.
 1. A customer message currently being handled by an online service agent.
 2. A completed text conversation that needs quality inspection.
 
+## Architecture
+
+![ClaimGuard AI architecture](docs/assets/architecture.svg)
+
+The current core is the deterministic rule runner introduced in `v0.2.0`. Future milestones will add RAG grounding, LLM judges, and a web UI without changing the QA report contract.
+
 ## V1 Product
 
 ### Customer Service Copilot
@@ -60,9 +66,11 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 ## Current Milestone
 
-Current package version: `0.2.0`.
+Current package version: `0.2.1`.
 
 M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM and RAG behavior are still under development.
+
+`v0.2.1` is a documentation patch that adds README architecture and roadmap diagrams.
 
 ## Repository Layout
 
@@ -116,8 +124,6 @@ print(catalog.get("RAG-005").name)
 
 ## Roadmap
 
-- Add a CLI command for running QA on a conversation fixture.
-- Add a retrieval layer over synthetic insurance policy clauses.
-- Add structured QA output with evidence, cited clauses, and suggested replies.
-- Add a lightweight web demo with Copilot and QA pages.
-- Add evaluation fixtures for false positives, missing citations, and incomplete explanations.
+![ClaimGuard AI roadmap](docs/assets/roadmap.svg)
+
+The roadmap keeps small documentation or fixture updates in patch releases, while capability milestones move the minor version forward.
