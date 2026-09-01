@@ -70,10 +70,23 @@ tests/                      automated tests
 
 ## Quick Start
 
-Run the current smoke test:
+Run the current QA CLI demo:
 
 ```bash
-python3 -m unittest tests/test_rule_catalog.py
+PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
+```
+
+The command returns a JSON QA report with:
+
+- `conversation_id`: reviewed conversation fixture ID.
+- `scenario`: demo case description.
+- `score`: deterministic quality score.
+- `findings`: rule findings with rule ID, category, risk level, evidence, and recommendation.
+
+Run the test suite:
+
+```bash
+python3 -m unittest discover -s tests
 ```
 
 Load the V1 rule catalog:
@@ -92,4 +105,3 @@ print(catalog.get("RAG-005").name)
 - Add structured QA output with evidence, cited clauses, and suggested replies.
 - Add a lightweight web demo with Copilot and QA pages.
 - Add evaluation fixtures for false positives, missing citations, and incomplete explanations.
-
