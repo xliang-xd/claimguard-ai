@@ -6,6 +6,8 @@ import math
 from pathlib import Path
 import re
 
+from .embeddings import EmbeddingClient
+
 
 CLAUSE_HEADING = re.compile(
     r"^## 条款\s*(?P<id>\d+)\s*[：:]\s*(?P<title>.+?)\s*$"
@@ -33,7 +35,16 @@ class IndexedClause:
 
 @dataclass(frozen=True)
 class KnowledgeIndex:
+    schema_version: int
+    embedding_model: str
+    dimensions: int
     clauses: list[IndexedClause]
+
+
+@dataclass(frozen=True)
+class RetrievedClause:
+    clause: PolicyClause
+    score: float
 
 
 def parse_policy_markdown(path: str | Path) -> list[PolicyClause]:
@@ -73,7 +84,9 @@ def parse_policy_markdown(path: str | Path) -> list[PolicyClause]:
 def save_knowledge_index(index: KnowledgeIndex, path: str | Path) -> None:
     _validate_index(index)
     payload = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": index.schema_version,
+        "embedding_model": index.embedding_model,
+        "dimensions": index.dimensions,
         "clauses": [
             {
                 "id": indexed_clause.clause.id,
@@ -102,13 +115,85 @@ def load_knowledge_index(path: str | Path) -> KnowledgeIndex:
         raise KnowledgeError("Knowledge index must be a JSON object")
     if payload.get("schema_version") != SCHEMA_VERSION:
         raise KnowledgeError(f"Unsupported schema version: {payload.get('schema_version')!r}")
+    required_fields = {"schema_version", "embedding_model", "dimensions", "clauses"}
+    missing_fields = required_fields.difference(payload)
+    if missing_fields:
+        raise KnowledgeError(
+            f"Knowledge index is missing fields: {', '.join(sorted(missing_fields))}"
+        )
     if not isinstance(payload.get("clauses"), list):
         raise KnowledgeError("Knowledge index clauses must be a list")
 
     clauses = [_parse_indexed_clause(item) for item in payload["clauses"]]
-    index = KnowledgeIndex(clauses=clauses)
+    index = KnowledgeIndex(
+        schema_version=payload["schema_version"],
+        embedding_model=payload["embedding_model"],
+        dimensions=payload["dimensions"],
+        clauses=clauses,
+    )
     _validate_index(index)
     return index
+
+
+def build_knowledge_index(
+    clauses: list[PolicyClause], client: EmbeddingClient
+) -> KnowledgeIndex:
+    if not isinstance(clauses, list) or not clauses:
+        raise KnowledgeError("Knowledge index must contain at least one clause")
+    for clause in clauses:
+        _validate_policy_clause(clause)
+    _ensure_unique_clause_ids(clauses)
+
+    vectors = client.embed([clause.content for clause in clauses])
+    if not isinstance(vectors, list) or len(vectors) != len(clauses):
+        raise KnowledgeError("Embedding count must match the number of policy clauses")
+
+    dimensions: int | None = None
+    indexed_clauses: list[IndexedClause] = []
+    for clause, vector in zip(clauses, vectors):
+        _validate_vector(vector)
+        if dimensions is None:
+            dimensions = len(vector)
+        elif len(vector) != dimensions:
+            raise KnowledgeError("Knowledge index vectors must have matching lengths")
+        indexed_clauses.append(IndexedClause(clause=clause, vector=list(vector)))
+
+    index = KnowledgeIndex(
+        schema_version=SCHEMA_VERSION,
+        embedding_model=_embedding_model_name(client),
+        dimensions=dimensions or 0,
+        clauses=indexed_clauses,
+    )
+    _validate_index(index)
+    return index
+
+
+def retrieve_clauses(
+    query: str, index: KnowledgeIndex, client: EmbeddingClient, top_k: int = 3
+) -> list[RetrievedClause]:
+    if not isinstance(query, str) or not query.strip():
+        raise KnowledgeError("Retrieval query must be a non-empty string")
+    if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k <= 0:
+        raise KnowledgeError("top_k must be a positive integer")
+
+    _validate_index(index)
+    query_vectors = client.embed([query])
+    if not isinstance(query_vectors, list) or len(query_vectors) != 1:
+        raise KnowledgeError("Query embedding must contain exactly one vector")
+    query_vector = query_vectors[0]
+    _validate_vector(query_vector)
+    if len(query_vector) != index.dimensions:
+        raise KnowledgeError("Query embedding dimensions do not match the knowledge index")
+
+    retrieved = [
+        RetrievedClause(
+            clause=indexed_clause.clause,
+            score=_cosine_similarity(query_vector, indexed_clause.vector),
+        )
+        for indexed_clause in index.clauses
+    ]
+    retrieved.sort(key=lambda item: (-item.score, item.clause.id))
+    return retrieved[:top_k]
 
 
 def _build_clause(
@@ -156,20 +241,23 @@ def _parse_indexed_clause(item: object) -> IndexedClause:
 def _validate_index(index: KnowledgeIndex) -> None:
     if not isinstance(index, KnowledgeIndex):
         raise KnowledgeError("Knowledge index must be a KnowledgeIndex")
-    if not index.clauses:
+    if index.schema_version != SCHEMA_VERSION:
+        raise KnowledgeError(f"Unsupported schema version: {index.schema_version!r}")
+    _require_non_empty_string(index.embedding_model, "embedding model")
+    _validate_dimensions(index.dimensions)
+    if not isinstance(index.clauses, list) or not index.clauses:
         raise KnowledgeError("Knowledge index must contain at least one clause")
 
-    _ensure_unique_clause_ids([indexed_clause.clause for indexed_clause in index.clauses])
-    vector_length: int | None = None
+    clauses: list[PolicyClause] = []
     for indexed_clause in index.clauses:
         if not isinstance(indexed_clause, IndexedClause):
             raise KnowledgeError("Knowledge index entries must be IndexedClause values")
         _validate_policy_clause(indexed_clause.clause)
         _validate_vector(indexed_clause.vector)
-        if vector_length is None:
-            vector_length = len(indexed_clause.vector)
-        elif len(indexed_clause.vector) != vector_length:
+        if len(indexed_clause.vector) != index.dimensions:
             raise KnowledgeError("Knowledge index vectors must have matching lengths")
+        clauses.append(indexed_clause.clause)
+    _ensure_unique_clause_ids(clauses)
 
 
 def _ensure_unique_clause_ids(clauses: list[PolicyClause]) -> None:
@@ -203,3 +291,25 @@ def _validate_vector(vector: object) -> None:
         for value in vector
     ):
         raise KnowledgeError("Knowledge index vectors must contain only finite numbers")
+
+
+def _validate_dimensions(dimensions: object) -> None:
+    if isinstance(dimensions, bool) or not isinstance(dimensions, int) or dimensions <= 0:
+        raise KnowledgeError("Knowledge index dimensions must be a positive integer")
+
+
+def _embedding_model_name(client: EmbeddingClient) -> str:
+    model = getattr(client, "model", "unknown")
+    if not isinstance(model, str) or not model.strip():
+        raise KnowledgeError("Embedding client model must be a non-empty string")
+    return model.strip()
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    left_magnitude = math.sqrt(sum(value * value for value in left))
+    right_magnitude = math.sqrt(sum(value * value for value in right))
+    if left_magnitude == 0 or right_magnitude == 0:
+        return 0.0
+    return sum(left_value * right_value for left_value, right_value in zip(left, right)) / (
+        left_magnitude * right_magnitude
+    )
