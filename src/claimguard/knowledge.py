@@ -35,10 +35,16 @@ class IndexedClause:
 
 @dataclass(frozen=True)
 class KnowledgeIndex:
-    schema_version: int
-    embedding_model: str
-    dimensions: int
     clauses: list[IndexedClause]
+    schema_version: int = SCHEMA_VERSION
+    embedding_model: str = "legacy-local"
+    dimensions: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.dimensions is None:
+            dimensions = _derive_dimensions(self.clauses)
+            if dimensions is not None:
+                object.__setattr__(self, "dimensions", dimensions)
 
 
 @dataclass(frozen=True)
@@ -115,22 +121,23 @@ def load_knowledge_index(path: str | Path) -> KnowledgeIndex:
         raise KnowledgeError("Knowledge index must be a JSON object")
     if payload.get("schema_version") != SCHEMA_VERSION:
         raise KnowledgeError(f"Unsupported schema version: {payload.get('schema_version')!r}")
-    required_fields = {"schema_version", "embedding_model", "dimensions", "clauses"}
-    missing_fields = required_fields.difference(payload)
-    if missing_fields:
-        raise KnowledgeError(
-            f"Knowledge index is missing fields: {', '.join(sorted(missing_fields))}"
-        )
     if not isinstance(payload.get("clauses"), list):
         raise KnowledgeError("Knowledge index clauses must be a list")
 
     clauses = [_parse_indexed_clause(item) for item in payload["clauses"]]
-    index = KnowledgeIndex(
-        schema_version=payload["schema_version"],
-        embedding_model=payload["embedding_model"],
-        dimensions=payload["dimensions"],
-        clauses=clauses,
-    )
+    metadata_fields = {"embedding_model", "dimensions"}
+    present_metadata_fields = metadata_fields.intersection(payload)
+    if not present_metadata_fields:
+        index = KnowledgeIndex(clauses=clauses)
+    elif present_metadata_fields == metadata_fields:
+        index = KnowledgeIndex(
+            schema_version=payload["schema_version"],
+            embedding_model=payload["embedding_model"],
+            dimensions=payload["dimensions"],
+            clauses=clauses,
+        )
+    else:
+        raise KnowledgeError("Knowledge index embedding metadata must be complete")
     _validate_index(index)
     return index
 
@@ -296,6 +303,17 @@ def _validate_vector(vector: object) -> None:
 def _validate_dimensions(dimensions: object) -> None:
     if isinstance(dimensions, bool) or not isinstance(dimensions, int) or dimensions <= 0:
         raise KnowledgeError("Knowledge index dimensions must be a positive integer")
+
+
+def _derive_dimensions(clauses: object) -> int | None:
+    if not isinstance(clauses, list) or not clauses:
+        return None
+    first_clause = clauses[0]
+    if not isinstance(first_clause, IndexedClause):
+        return None
+    if not isinstance(first_clause.vector, list) or not first_clause.vector:
+        return None
+    return len(first_clause.vector)
 
 
 def _embedding_model_name(client: EmbeddingClient) -> str:

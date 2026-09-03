@@ -81,9 +81,6 @@ class KnowledgeTest(unittest.TestCase):
 
     def test_index_round_trip_preserves_literal_vectors(self):
         index = KnowledgeIndex(
-            schema_version=1,
-            embedding_model="test-model",
-            dimensions=2,
             clauses=[
                 IndexedClause(
                     clause=PolicyClause(
@@ -100,7 +97,33 @@ class KnowledgeTest(unittest.TestCase):
 
         save_knowledge_index(index, index_path)
 
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["embedding_model"], "legacy-local")
+        self.assertEqual(payload["dimensions"], 2)
         self.assertEqual(load_knowledge_index(index_path), index)
+
+    def test_loads_task_1_schema_v1_json_without_embedding_metadata(self):
+        index_path = self.write_index_payload(
+            {
+                "schema_version": 1,
+                "clauses": [
+                    {
+                        "id": "12",
+                        "title": "免赔额",
+                        "content": "赔付前扣免赔额。",
+                        "source_path": "policy.md",
+                        "vector": [0.25, -0.5],
+                    }
+                ],
+            }
+        )
+
+        index = load_knowledge_index(index_path)
+
+        self.assertEqual(index.schema_version, 1)
+        self.assertEqual(index.embedding_model, "legacy-local")
+        self.assertEqual(index.dimensions, 2)
+        self.assertEqual(index.clauses[0].vector, [0.25, -0.5])
 
     def test_builds_index_from_complete_clause_contents(self):
         clauses = [
