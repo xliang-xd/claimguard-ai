@@ -29,6 +29,30 @@ def run_rules(conversation: Conversation) -> list[RuleMatch]:
     ):
         matches.append(RuleMatch("RAG-001", _first_customer_message(conversation)))
 
+    if _has_chinese_deductible_dispute(customer_text) and _lacks_deductible_explanation(
+        agent_text
+    ):
+        matches.append(RuleMatch("RAG-001", _first_customer_message(conversation)))
+
+    if _has_waiting_period_denial_question(
+        customer_text
+    ) and _lacks_waiting_period_explanation(agent_text):
+        matches.append(RuleMatch("RAG-002", _first_customer_message(conversation)))
+
+    if _has_denial_citation_question(
+        customer_text
+    ) and _lacks_clause_citation(agent_text):
+        matches.append(RuleMatch("RAG-005", _first_customer_message(conversation)))
+    elif _has_coverage_denial_question(
+        customer_text
+    ) and _lacks_coverage_explanation(agent_text):
+        matches.append(RuleMatch("RAG-003", _first_customer_message(conversation)))
+
+    if _has_accident_definition_question(
+        customer_text
+    ) and _lacks_accident_definition(agent_text):
+        matches.append(RuleMatch("RAG-004", _first_customer_message(conversation)))
+
     return matches
 
 
@@ -68,3 +92,59 @@ def _has_impatient_tone(text: str) -> bool:
 
 def _mentions_deductible_or_clause(text: str) -> bool:
     return "deductible" in text or "clause" in text
+
+
+def _has_chinese_deductible_dispute(text: str) -> bool:
+    return _contains_all(text, ("为什么", "理赔")) and _contains_any(
+        text, ("只赔", "赔得少", "少赔")
+    )
+
+
+def _lacks_deductible_explanation(text: str) -> bool:
+    return not _contains_any(text, ("免赔额", "条款12", "条款 12"))
+
+
+def _has_waiting_period_denial_question(text: str) -> bool:
+    return _contains_all(text, ("为什么", "等待期")) and _contains_any(
+        text, ("不赔", "拒赔", "不予赔付")
+    )
+
+
+def _lacks_waiting_period_explanation(text: str) -> bool:
+    return "等待期" not in text
+
+
+def _has_coverage_denial_question(text: str) -> bool:
+    return "为什么" in text and _contains_any(text, ("疾病", "皮肤病", "病症")) and _contains_any(
+        text, ("保障范围", "不在保障", "不能理赔", "不能赔")
+    )
+
+
+def _lacks_coverage_explanation(text: str) -> bool:
+    return not _contains_any(text, ("疾病保障清单", "保障范围", "条款24", "条款 24"))
+
+
+def _has_accident_definition_question(text: str) -> bool:
+    return "意外事故" in text and _contains_any(text, ("怎么定义", "具体定义", "算不算"))
+
+
+def _lacks_accident_definition(text: str) -> bool:
+    return not _contains_any(text, ("突发", "外来", "非故意", "直接导致"))
+
+
+def _has_denial_citation_question(text: str) -> bool:
+    return _contains_any(text, ("依据哪条保单条款", "依据哪条条款", "引用哪条条款")) and _contains_any(
+        text, ("拒赔", "不赔", "不能赔")
+    )
+
+
+def _lacks_clause_citation(text: str) -> bool:
+    return "条款" not in text
+
+
+def _contains_all(text: str, phrases: tuple[str, ...]) -> bool:
+    return all(phrase in text for phrase in phrases)
+
+
+def _contains_any(text: str, phrases: tuple[str, ...]) -> bool:
+    return any(phrase in text for phrase in phrases)

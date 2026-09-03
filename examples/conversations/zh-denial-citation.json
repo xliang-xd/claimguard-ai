@@ -1,0 +1,15 @@
+{
+  "id": "zh-denial-citation-001",
+  "scenario": "Customer asks for the policy clause supporting a coverage denial.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "我家宠物的疾病不在保障范围被拒赔，依据哪条保单条款？"
+    },
+    {
+      "role": "agent",
+      "content": "这是审核决定，不能赔。"
+    }
+  ],
+  "expected_risks": ["RAG-005"]
+}

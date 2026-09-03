@@ -1,0 +1,15 @@
+{
+  "id": "zh-coverage-denial-001",
+  "scenario": "Customer asks why a disease is outside policy coverage.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "为什么我家宠物的皮肤病不在保障范围，不能理赔？"
+    },
+    {
+      "role": "agent",
+      "content": "这个疾病不能报销。"
+    }
+  ],
+  "expected_risks": ["RAG-003"]
+}

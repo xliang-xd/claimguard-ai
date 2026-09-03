@@ -22,6 +22,10 @@ class QAReportTest(unittest.TestCase):
             [finding.rule_id for finding in report.findings],
             ["SEM-002", "SEM-003", "RAG-001"],
         )
+        rag_finding = next(
+            finding for finding in report.findings if finding.rule_id == "RAG-001"
+        )
+        self.assertIsNone(rag_finding.grounding)
         self.assertEqual(report.findings[0].risk_level, "critical")
         self.assertIn(
             "review team approved it this way", report.findings[0].evidence.lower()

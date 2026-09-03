@@ -1,0 +1,15 @@
+{
+  "id": "zh-accident-definition-001",
+  "scenario": "Customer asks for the policy definition of an accident.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "摔伤算不算意外事故，意外事故具体怎么定义？"
+    },
+    {
+      "role": "agent",
+      "content": "比如摔伤可能算。"
+    }
+  ],
+  "expected_risks": ["RAG-004"]
+}

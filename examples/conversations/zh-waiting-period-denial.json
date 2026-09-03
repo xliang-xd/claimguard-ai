@@ -1,0 +1,15 @@
+{
+  "id": "zh-waiting-period-denial-001",
+  "scenario": "Customer asks why treatment during a policy waiting period was denied.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "保单刚生效10天，为什么等待期内的疾病治疗不赔？"
+    },
+    {
+      "role": "agent",
+      "content": "系统审核不通过。"
+    }
+  ],
+  "expected_risks": ["RAG-002"]
+}

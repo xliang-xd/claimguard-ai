@@ -1,0 +1,15 @@
+{
+  "id": "zh-deductible-dispute-001",
+  "scenario": "Customer asks why a pet insurance claim payment was reduced.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "我的宠物住院花了1800元，为什么理赔只赔800元？"
+    },
+    {
+      "role": "agent",
+      "content": "审核结果就是这样。"
+    }
+  ],
+  "expected_risks": ["RAG-001"]
+}
