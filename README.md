@@ -11,7 +11,9 @@ ClaimGuard AI is a focused GitHub demo project for text-based insurance service.
 
 ![ClaimGuard AI architecture](docs/assets/architecture.svg)
 
-The current core is the deterministic rule runner introduced in `v0.2.0`. Future milestones will add RAG grounding, LLM judges, and a web UI without changing the QA report contract.
+The current core combines deterministic QA with v0.3 RAG grounding for the
+supported Chinese policy scenarios. LLM judges and a web UI remain future
+milestones; the QA report contract remains stable.
 
 ## V1 Product
 
@@ -66,7 +68,7 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 ## Current Milestone
 
-Current package version: `0.2.2`.
+Current package version: `0.3.0`.
 
 M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM and RAG behavior are still under development.
 
@@ -74,6 +76,11 @@ M2 adds the first deterministic rule runner. QA findings now come from conversat
 
 `v0.2.2` is a documentation patch that records the maintained agent
 orchestration and domestic model defaults in `docs/agent-orchestration.md`.
+
+`v0.3.0` adds deterministic Chinese policy grounding: a policy parser and
+validated local index, Qwen `qwen3.7-text-embedding` retrieval, five supported
+RAG rules, retrieval evidence on QA findings, and backward-compatible CLI
+commands for index creation and grounded QA.
 
 ## Repository Layout
 
@@ -121,6 +128,9 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-di
 
 The generated index is stored in `.claimguard/petcare-plus-policy.json`.
 API keys and generated indexes are intentionally not committed.
+
+See `docs/m3-rag-grounding.md` for the supported Chinese cases, index
+lifecycle, operator commands, and current limitations.
 
 The command returns a JSON QA report with:
 

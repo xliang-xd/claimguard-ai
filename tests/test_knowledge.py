@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+import claimguard
 from claimguard.knowledge import (
     IndexedClause,
     KnowledgeError,
@@ -25,6 +26,11 @@ class StaticEmbeddingClient:
 
     def embed(self, texts):
         return [self.vectors[text] for text in texts]
+
+
+class KnowledgeMetadataTest(unittest.TestCase):
+    def test_public_package_version_matches_v0_3_release(self):
+        self.assertEqual(claimguard.__version__, "0.3.0")
 
 
 class KnowledgeTest(unittest.TestCase):

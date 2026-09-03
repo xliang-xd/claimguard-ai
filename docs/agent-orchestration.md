@@ -6,19 +6,23 @@ judgment, and clear QA evidence instead of a large multi-agent chat graph.
 
 ## Current State
 
-The current `v0.2.2` codebase does not yet run LLM-backed agents. The
-implemented runtime is:
+The current `v0.3.0` codebase keeps its deterministic QA workflow and adds a
+narrow, evidence-producing RAG path for supported Chinese policy scenarios:
 
 ```text
 QA CLI
   -> Conversation Loader
   -> Rule Catalog
   -> Deterministic Rule Runner
+  -> optional Policy Parser + Local Knowledge Index
+  -> optional Qwen Embedding Retrieval
   -> QA Report Builder
 ```
 
 This stage proves the basic quality-inspection contract: completed
-conversation in, structured QA report out.
+conversation in, structured QA report out. When `--index` is supplied, matched
+Chinese RAG findings include retrieved-clause evidence. The legacy invocation
+remains available without an index or a model call.
 
 ## Target Topology
 
@@ -134,8 +138,8 @@ defaults to a China-local model stack.
 | Risk Guard | `qwen3.7-plus` | Compliance-sensitive risk detection |
 | Reply Writer | `qwen3.7-plus` | Copilot response generation |
 | Hard Case Judge | `qwen3.8-max` | Complex demo cases and difficult disputes |
-| Embedding | `text-embedding-v4` | Dense retrieval for policy clauses |
-| Reranking | `qwen3-rerank` | Clause reranking before judgment |
+| Embedding | `qwen3.7-text-embedding` | v0.3 dense retrieval for policy clauses |
+| Reranking | `qwen3-rerank` | Deferred; not used by the v0.3 runtime |
 
 The default provider is Alibaba Cloud Model Studio / Qwen. The default region
 should be a mainland China region, such as `cn-beijing`, when API access is
@@ -157,6 +161,8 @@ References:
 - Prefer structured JSON outputs for judgments and reports.
 - Keep RAG evidence explicit: retrieved clause, clause ID, source document, and
   citation judgment should be visible in the final report.
+- Treat v0.3 retrieval evidence as deterministic context, not an LLM citation
+  judgment. Reranking and LLM citation checks are future work.
 - Treat deterministic rules, LLM judges, RAG, and evaluation fixtures as
   separate layers so each can be tested independently.
 - Use China-local providers by default for cost and compliance; document any

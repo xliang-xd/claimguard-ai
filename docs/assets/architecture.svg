@@ -1,17 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" width="1200" height="780" role="img" aria-labelledby="title desc">
-  <title id="title">ClaimGuard AI Architecture</title>
-  <desc id="desc">ClaimGuard AI architecture covering text inputs, CLI and API boundary, QA workflow, current deterministic rule runner, planned RAG and LLM judges, and outputs.</desc>
+  <title id="title">ClaimGuard AI v0.3 Architecture</title>
+  <desc id="desc">Implemented deterministic Chinese RAG grounding with policy parsing, Qwen embedding retrieval, an ignored local index, and retrieval evidence.</desc>
   <style>
     text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
     .title { fill: #111827; font-size: 26px; font-weight: 700; }
     .subtitle { fill: #6b7280; font-size: 14px; }
-    .section-line { stroke: #e5e7eb; stroke-width: 1.4; }
-    .layer-label { fill: #6b7280; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+    .layer { fill: #6b7280; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
     .node-title { fill: #111827; font-size: 15px; font-weight: 700; }
     .node-sub { fill: #4b5563; font-size: 12px; }
     .small { fill: #6b7280; font-size: 11px; }
-    .badge-text { fill: #065f46; font-size: 12px; font-weight: 700; }
     .edge-label { fill: #374151; font-size: 11px; }
+    .badge { fill: #065f46; font-size: 12px; font-weight: 700; }
   </style>
   <defs>
     <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
@@ -19,104 +18,106 @@
     <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/></marker>
     <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/></marker>
   </defs>
-  <g data-graph-role="background">
-    <rect width="1200" height="780" fill="#ffffff"/>
-    <line x1="50" y1="96" x2="1150" y2="96" class="section-line"/>
-    <text x="50" y="118" class="layer-label">TEXT SERVICE INPUTS</text>
-    <line x1="50" y1="216" x2="1150" y2="216" class="section-line"/>
-    <text x="50" y="238" class="layer-label">ENTRYPOINT</text>
-    <line x1="50" y1="336" x2="1150" y2="336" class="section-line"/>
-    <text x="50" y="358" class="layer-label">WORKFLOW ORCHESTRATION</text>
-    <line x1="50" y1="466" x2="1150" y2="466" class="section-line"/>
-    <text x="50" y="488" class="layer-label">CAPABILITY MODULES</text>
-    <line x1="50" y1="616" x2="1150" y2="616" class="section-line"/>
-    <text x="50" y="638" class="layer-label">OUTPUTS AND PROJECT SYSTEM</text>
+  <g data-graph-role="background"><rect width="1200" height="780" fill="#ffffff"/></g>
+  <g data-graph-role="background"><line x1="50" y1="96" x2="1150" y2="96" stroke="#e5e7eb" stroke-width="1.4"/><text x="50" y="118" class="layer">TEXT SERVICE INPUTS</text></g>
+  <g data-graph-role="background"><line x1="50" y1="216" x2="1150" y2="216" stroke="#e5e7eb" stroke-width="1.4"/><text x="50" y="238" class="layer">ENTRYPOINT</text></g>
+  <g data-graph-role="background"><line x1="50" y1="336" x2="1150" y2="336" stroke="#e5e7eb" stroke-width="1.4"/><text x="50" y="358" class="layer">QA WORKFLOW</text></g>
+  <g data-graph-role="background"><line x1="50" y1="466" x2="1150" y2="466" stroke="#e5e7eb" stroke-width="1.4"/><text x="50" y="488" class="layer">RAG</text></g>
+  <g data-graph-role="background"><line x1="50" y1="626" x2="1150" y2="626" stroke="#e5e7eb" stroke-width="1.4"/><text x="50" y="648" class="layer">OUTPUTS AND RELEASE</text></g>
+  <g data-graph-role="label"><text x="60" y="48" class="title">ClaimGuard AI Architecture</text><text x="60" y="72" class="subtitle">Deterministic QA with implemented v0.3 Chinese RAG grounding; LLM judgment remains deferred.</text><rect x="846" y="28" width="284" height="40" rx="20" fill="#ecfdf5" stroke="#10b981"/><text x="988" y="53" text-anchor="middle" class="badge">Current: v0.3.0 RAG grounding</text></g>
+  <path data-graph-role="edge" data-source="input" data-target="cli" d="M 600,184 L 600,236" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="625" y="226" text-anchor="middle" class="edge-label">text input</text>
+  <path data-graph-role="edge" data-source="cli" data-target="workflow" d="M 600,294 L 600,356" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="625" y="344" text-anchor="middle" class="edge-label">run QA</text>
+  <path data-graph-role="edge" data-source="workflow" data-target="parser" d="M 510,434 L 510,450 L 180,450 L 180,490" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="330" y="442" text-anchor="middle" class="edge-label">policy source</text>
+  <path data-graph-role="edge" data-source="parser" data-target="embedding" d="M 260,525 L 300,525" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <text data-graph-role="label" x="280" y="474" text-anchor="middle" class="edge-label">clause text</text>
+  <path data-graph-role="edge" data-source="embedding" data-target="index" d="M 460,525 L 500,525" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-green)"/>
+  <text data-graph-role="label" x="480" y="474" text-anchor="middle" class="edge-label">store vectors</text>
+  <path data-graph-role="edge" data-source="workflow" data-target="embedding" d="M 570,434 L 570,462 L 380,462 L 380,490" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <text data-graph-role="label" x="475" y="454" text-anchor="middle" class="edge-label">query embed</text>
+  <path data-graph-role="edge" data-source="index" data-target="runner" d="M 660,525 L 700,525" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <text data-graph-role="label" x="680" y="474" text-anchor="middle" class="edge-label">retrieve clause</text>
+  <path data-graph-role="edge" data-source="runner" data-target="evidence" d="M 860,525 L 900,525" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="880" y="474" text-anchor="middle" class="edge-label">attach evidence</text>
+  <path data-graph-role="edge" data-source="runner" data-target="report" d="M 780,560 L 780,604 L 430,604 L 430,650" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="605" y="596" text-anchor="middle" class="edge-label">findings</text>
+  <path data-graph-role="edge" data-source="evidence" data-target="report" d="M 980,560 L 980,616 L 580,616 L 580,650" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="780" y="608" text-anchor="middle" class="edge-label">clause ID + score</text>
+  <path data-graph-role="edge" data-source="workflow" data-target="future" d="M 690,434 L 690,450 L 1080,450 L 1080,434" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-orange)"/>
+  <text data-graph-role="label" x="895" y="442" text-anchor="middle" class="edge-label">future judge</text>
+  <g data-graph-role="node" data-node-id="input" data-graph-bounds="450 126 750 184">
+    <rect x="450" y="126" width="300" height="58" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.6"/>
+    <text x="600.0" y="154" text-anchor="middle" class="node-title">Text Inputs</text>
+    <text x="600.0" y="177" text-anchor="middle" class="node-sub">conversation fixtures; UI/API later</text>
   </g>
-  <g data-graph-role="label">
-    <text x="60" y="48" class="title">ClaimGuard AI Architecture</text>
-    <text x="60" y="72" class="subtitle">Text customer service QA today; Copilot UI, RAG grounding, and LLM judges are planned extension points.</text>
-    <rect x="875" y="28" width="255" height="40" rx="20" fill="#ecfdf5" stroke="#10b981"/>
-    <text x="1002" y="53" text-anchor="middle" class="badge-text">Current core: v0.2.0 deterministic rules</text>
-  </g>
-  <path data-graph-role="edge" data-source="input" data-target="entry" d="M 600,183 L 600,224" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <text data-graph-role="label" x="600" y="216" text-anchor="middle" class="edge-label">text input</text>
-  <path data-graph-role="edge" data-source="entry" data-target="workflow" d="M 600,294 L 600,344" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <text data-graph-role="label" x="600" y="336" text-anchor="middle" class="edge-label">run qa</text>
-  <path data-graph-role="edge" data-source="workflow" data-target="runner" d="M 600,432 L 600,488" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <text data-graph-role="label" x="600" y="480" text-anchor="middle" class="edge-label">active</text>
-  <path data-graph-role="edge" data-source="workflow" data-target="rag" d="M 540,434 L 540,448 L 205,448 L 205,488" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)" stroke-dasharray="6 4"/>
-  <text data-graph-role="label" x="205" y="440" text-anchor="middle" class="edge-label">planned rag</text>
-  <path data-graph-role="edge" data-source="workflow" data-target="catalog" d="M 565,434 L 565,452 L 445,452 L 445,488" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/>
-  <text data-graph-role="label" x="445" y="444" text-anchor="middle" class="edge-label">rule metadata</text>
-  <path data-graph-role="edge" data-source="workflow" data-target="llm" d="M 660,434 L 660,448 L 925,448 L 925,488" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)" stroke-dasharray="6 4"/>
-  <text data-graph-role="label" x="925" y="440" text-anchor="middle" class="edge-label">planned judge</text>
-  <path data-graph-role="edge" data-source="runner" data-target="catalog" d="M 546,525 L 534,525" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/>
-  <path data-graph-role="edge" data-source="runner" data-target="report" d="M 590,562 L 590,588 L 360,588 L 360,628" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <text data-graph-role="label" x="360" y="580" text-anchor="middle" class="edge-label">findings</text>
-  <path data-graph-role="edge" data-source="runner" data-target="tests" d="M 640,562 L 640,628" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
-  <text data-graph-role="label" x="600" y="580" text-anchor="middle" class="edge-label">regression</text>
-  <path data-graph-role="edge" data-source="workflow" data-target="docs" d="M 730,432 L 1070,432 L 1070,610 L 860,610 L 860,628" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
-  <text data-graph-role="label" x="860" y="602" text-anchor="middle" class="edge-label">document</text>
-  <g data-graph-role="node" data-node-id="input">
-    <rect x="450" y="124" width="300" height="58" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.6"/>
-    <text x="600" y="152" text-anchor="middle" class="node-title">Text Inputs</text>
-    <text x="600" y="174" text-anchor="middle" class="node-sub">conversation fixtures now; UI/API later</text>
-  </g>
-  <g data-graph-role="node" data-node-id="entry">
+  <g data-graph-role="node" data-node-id="cli" data-graph-bounds="470 236 730 294">
     <rect x="470" y="236" width="260" height="58" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/>
-    <text x="600" y="264" text-anchor="middle" class="node-title">CLI / API Boundary</text>
-    <text x="600" y="286" text-anchor="middle" class="node-sub">python -m claimguard.cli</text>
+    <text x="600.0" y="264" text-anchor="middle" class="node-title">QA CLI</text>
+    <text x="600.0" y="287" text-anchor="middle" class="node-sub">legacy and grounded commands</text>
   </g>
-  <g data-graph-role="node" data-node-id="workflow">
-    <rect x="460" y="356" width="280" height="76" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
-    <text x="600" y="384" text-anchor="middle" class="node-title">QA Workflow</text>
-    <text x="600" y="406" text-anchor="middle" class="node-sub">loads catalog, runs checks</text>
-    <text x="600" y="423" text-anchor="middle" class="node-sub">keeps stable report contract</text>
+  <g data-graph-role="node" data-node-id="workflow" data-graph-bounds="460 356 740 434">
+    <rect x="460" y="356" width="280" height="78" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
+    <text x="600.0" y="384" text-anchor="middle" class="node-title">RAG-aware QA Workflow</text>
+    <text x="600.0" y="407" text-anchor="middle" class="node-sub">matches deterministic rules</text>
+    <text x="600.0" y="424" text-anchor="middle" class="node-sub">preserves report contract</text>
   </g>
-  <g data-graph-role="node" data-node-id="rag">
-    <rect x="120" y="490" width="170" height="70" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.6" stroke-dasharray="6 4"/>
-    <text x="205" y="518" text-anchor="middle" class="node-title">RAG Grounding</text>
-    <text x="205" y="540" text-anchor="middle" class="node-sub">planned v0.3.0</text>
+  <g data-graph-role="node" data-node-id="parser" data-graph-bounds="100 490 260 560">
+    <rect x="100" y="490" width="160" height="70" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.6"/>
+    <text x="180.0" y="518" text-anchor="middle" class="node-title">Policy Parser</text>
+    <text x="180.0" y="541" text-anchor="middle" class="node-sub">Chinese clauses</text>
+    <text x="180.0" y="558" text-anchor="middle" class="node-sub">validated IDs</text>
   </g>
-  <g data-graph-role="node" data-node-id="catalog">
-    <rect x="360" y="490" width="170" height="70" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.6"/>
-    <text x="445" y="518" text-anchor="middle" class="node-title">Rule Catalog</text>
-    <text x="445" y="540" text-anchor="middle" class="node-sub">12 V1 rules</text>
+  <g data-graph-role="node" data-node-id="embedding" data-graph-bounds="300 490 460 560">
+    <rect x="300" y="490" width="160" height="70" rx="8" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1.6"/>
+    <text x="380.0" y="518" text-anchor="middle" class="node-title">Qwen Embedding</text>
+    <text x="380.0" y="541" text-anchor="middle" class="node-sub">qwen3.7-text</text>
+    <text x="380.0" y="558" text-anchor="middle" class="node-sub">embedding</text>
   </g>
-  <g data-graph-role="node" data-node-id="runner">
-    <rect x="550" y="490" width="170" height="70" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.6"/>
-    <text x="635" y="518" text-anchor="middle" class="node-title">Rule Runner</text>
-    <text x="635" y="540" text-anchor="middle" class="node-sub">SEM-002, SEM-003</text>
-    <text x="635" y="557" text-anchor="middle" class="node-sub">RAG-001 active</text>
+  <g data-graph-role="node" data-node-id="index" data-graph-bounds="500 490 660 560">
+    <rect x="500" y="490" width="160" height="70" rx="8" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.6"/>
+    <text x="580.0" y="518" text-anchor="middle" class="node-title">Local Index</text>
+    <text x="580.0" y="541" text-anchor="middle" class="node-sub">.claimguard/</text>
+    <text x="580.0" y="558" text-anchor="middle" class="node-sub">ignored JSON</text>
   </g>
-  <g data-graph-role="node" data-node-id="llm">
-    <rect x="840" y="490" width="170" height="70" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.6" stroke-dasharray="6 4"/>
-    <text x="925" y="518" text-anchor="middle" class="node-title">LLM Judge</text>
-    <text x="925" y="540" text-anchor="middle" class="node-sub">planned v0.4.0</text>
+  <g data-graph-role="node" data-node-id="runner" data-graph-bounds="700 490 860 560">
+    <rect x="700" y="490" width="160" height="70" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.6"/>
+    <text x="780.0" y="518" text-anchor="middle" class="node-title">Rule Runner</text>
+    <text x="780.0" y="541" text-anchor="middle" class="node-sub">RAG-001 to</text>
+    <text x="780.0" y="558" text-anchor="middle" class="node-sub">RAG-005</text>
   </g>
-  <g data-graph-role="node" data-node-id="report">
-    <rect x="250" y="630" width="220" height="58" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6"/>
-    <text x="360" y="658" text-anchor="middle" class="node-title">QA JSON Report</text>
-    <text x="360" y="680" text-anchor="middle" class="node-sub">score, evidence, findings</text>
+  <g data-graph-role="node" data-node-id="evidence" data-graph-bounds="900 490 1060 560">
+    <rect x="900" y="490" width="160" height="70" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.6"/>
+    <text x="980.0" y="518" text-anchor="middle" class="node-title">Retrieval Evidence</text>
+    <text x="980.0" y="541" text-anchor="middle" class="node-sub">clause + source</text>
+    <text x="980.0" y="558" text-anchor="middle" class="node-sub">score</text>
   </g>
-  <g data-graph-role="node" data-node-id="tests">
-    <rect x="500" y="630" width="220" height="58" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6"/>
-    <text x="610" y="658" text-anchor="middle" class="node-title">Tests and Evals</text>
-    <text x="610" y="680" text-anchor="middle" class="node-sub">fixtures as oracle data</text>
+  <g data-graph-role="node" data-node-id="future" data-graph-bounds="1000 380 1150 434">
+    <rect x="1000" y="380" width="150" height="54" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="1075.0" y="408" text-anchor="middle" class="node-title">LLM Judge</text>
+    <text x="1075.0" y="431" text-anchor="middle" class="node-sub">deferred</text>
   </g>
-  <g data-graph-role="node" data-node-id="docs">
-    <rect x="750" y="630" width="220" height="58" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6"/>
-    <text x="860" y="658" text-anchor="middle" class="node-title">Docs and GitHub</text>
-    <text x="860" y="680" text-anchor="middle" class="node-sub">README, milestones, tags</text>
+  <g data-graph-role="node" data-node-id="report" data-graph-bounds="320 650 540 708">
+    <rect x="320" y="650" width="220" height="58" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6"/>
+    <text x="430.0" y="678" text-anchor="middle" class="node-title">QA JSON Report</text>
+    <text x="430.0" y="701" text-anchor="middle" class="node-sub">findings and evidence</text>
   </g>
-  <g data-graph-role="legend" transform="translate(70,720)">
+  <g data-graph-role="node" data-node-id="release" data-graph-bounds="660 650 890 708">
+    <rect x="660" y="650" width="230" height="58" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.6"/>
+    <text x="775.0" y="678" text-anchor="middle" class="node-title">Tests + Release Docs</text>
+    <text x="775.0" y="701" text-anchor="middle" class="node-sub">v0.3.0 metadata</text>
+  </g>
+  <path data-graph-role="edge" data-source="report" data-target="release" d="M 540,679 L 660,679" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text data-graph-role="label" x="600" y="669" text-anchor="middle" class="edge-label">verify</text>
+  <g data-graph-role="legend" transform="translate(70,740)">
     <line x1="0" y1="8" x2="36" y2="8" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
-    <text x="46" y="12" class="small">active request/report flow</text>
-    <line x1="220" y1="8" x2="256" y2="8" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-green)"/>
-    <text x="266" y="12" class="small">planned RAG grounding</text>
-    <line x1="430" y1="8" x2="466" y2="8" stroke="#9333ea" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-purple)"/>
-    <text x="476" y="12" class="small">future LLM/eval flow</text>
-    <line x1="625" y1="8" x2="661" y2="8" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/>
-    <text x="671" y="12" class="small">rule metadata lookup</text>
+    <text x="46" y="12" class="small">active QA/report flow</text>
+    <line x1="255" y1="8" x2="291" y2="8" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-green)"/>
+    <text x="301" y="12" class="small">index read/write</text>
+    <line x1="465" y1="8" x2="501" y2="8" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
+    <text x="511" y="12" class="small">embedding transform</text>
+    <line x1="700" y1="8" x2="736" y2="8" stroke="#ea580c" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-orange)"/>
+    <text x="746" y="12" class="small">deferred extension</text>
   </g>
 </svg>
