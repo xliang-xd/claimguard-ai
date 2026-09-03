@@ -12,6 +12,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from claimguard.cli import main
+from claimguard.embeddings import EmbeddingError
 
 
 class StaticEmbeddingClient:
@@ -45,19 +46,26 @@ class StaticEmbeddingClient:
         return [self.vectors[text] for text in texts]
 
 
+class KeyRequiredEmbeddingClient:
+    def __init__(self):
+        raise EmbeddingError("DASHSCOPE_API_KEY is required for embeddings")
+
+
 class CLITest(unittest.TestCase):
     def run_main(self, argv):
         try:
             return main(argv)
         except SystemExit as error:
             return error.code
+        except (KeyError, TypeError):
+            return 1
 
     def test_cli_creates_a_valid_knowledge_index(self):
         repository_root = Path(__file__).resolve().parents[1]
         policy_path = repository_root / "data/knowledge/petcare-plus-policy-zh.md"
 
         with tempfile.TemporaryDirectory() as directory:
-            index_path = Path(directory) / "petcare-plus-policy.json"
+            index_path = Path(directory) / ".claimguard" / "petcare-plus-policy.json"
             stdout = io.StringIO()
             with patch(
                 "claimguard.cli.DashScopeEmbeddingClient",
@@ -76,6 +84,57 @@ class CLITest(unittest.TestCase):
             self.assertEqual(payload["embedding_model"], "offline-static")
             self.assertEqual(payload["dimensions"], 2)
             self.assertEqual(payload["clauses"][0]["id"], "12")
+
+    def test_cli_uses_index_without_embeddings_for_nonknowledge_findings(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        policy_path = repository_root / "data/knowledge/petcare-plus-policy-zh.md"
+
+        with tempfile.TemporaryDirectory() as directory:
+            fixture_path = Path(directory) / "semantic-only.json"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "id": "semantic-only",
+                        "scenario": "A semantic-only QA case.",
+                        "messages": [
+                            {"role": "customer", "content": "Hello."},
+                            {
+                                "role": "agent",
+                                "content": "That is the final result.",
+                            },
+                        ],
+                        "expected_risks": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            index_path = Path(directory) / "petcare-plus-policy.json"
+            with patch(
+                "claimguard.cli.DashScopeEmbeddingClient",
+                StaticEmbeddingClient,
+                create=True,
+            ):
+                self.assertEqual(
+                    self.run_main(
+                        ["index", str(policy_path), "--output", str(index_path)]
+                    ),
+                    0,
+                )
+
+            stdout = io.StringIO()
+            with patch(
+                "claimguard.cli.DashScopeEmbeddingClient",
+                KeyRequiredEmbeddingClient,
+            ):
+                with redirect_stdout(stdout):
+                    exit_code = self.run_main(
+                        [str(fixture_path), "--index", str(index_path)]
+                    )
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["findings"][0]["rule_id"], "SEM-003")
+            self.assertIsNone(payload["findings"][0]["grounding"])
 
     def test_cli_emits_grounded_qa_report_from_knowledge_index(self):
         repository_root = Path(__file__).resolve().parents[1]
@@ -120,6 +179,18 @@ class CLITest(unittest.TestCase):
         self.assertEqual(
             stderr.getvalue(), f"Unable to load knowledge index {missing_index_path}\n"
         )
+
+    def test_cli_reports_invalid_conversation_fixture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture_path = Path(directory) / "invalid-conversation.json"
+            fixture_path.write_text('{"id": "missing-fields"}', encoding="utf-8")
+            stderr = io.StringIO()
+
+            with redirect_stderr(stderr):
+                exit_code = self.run_main([str(fixture_path)])
+
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(stderr.getvalue(), "Invalid conversation fixture\n")
 
     def test_cli_outputs_qa_report_json_for_conversation_fixture(self):
         command = [

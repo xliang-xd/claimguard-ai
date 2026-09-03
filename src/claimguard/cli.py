@@ -17,6 +17,16 @@ from claimguard.qa import generate_qa_report
 from claimguard.rules import load_rule_catalog
 
 
+class _LazyDashScopeEmbeddingClient:
+    def __init__(self):
+        self._client = None
+
+    def embed(self, texts):
+        if self._client is None:
+            self._client = DashScopeEmbeddingClient()
+        return self._client.embed(texts)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Run ClaimGuard AI QA on a conversation fixture."
@@ -36,10 +46,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.index is not None:
                 parser.error("--index is only supported for conversation QA")
 
-            client = DashScopeEmbeddingClient()
-            knowledge_index = build_knowledge_index(
-                parse_policy_markdown(args.policy), client
-            )
+            clauses = parse_policy_markdown(args.policy)
+            knowledge_index = build_knowledge_index(clauses, DashScopeEmbeddingClient())
             save_knowledge_index(knowledge_index, args.output)
             return 0
 
@@ -56,12 +64,15 @@ def main(argv: list[str] | None = None) -> int:
                 conversation,
                 load_rule_catalog(),
                 knowledge_index=load_knowledge_index(args.index),
-                embedding_client=DashScopeEmbeddingClient(),
+                embedding_client=_LazyDashScopeEmbeddingClient(),
             )
         print(json.dumps(report.to_dict(), indent=2))
         return 0
     except (KnowledgeError, EmbeddingError, OSError, json.JSONDecodeError) as error:
         print(str(error), file=sys.stderr)
+        return 2
+    except (KeyError, TypeError):
+        print("Invalid conversation fixture", file=sys.stderr)
         return 2
 
 

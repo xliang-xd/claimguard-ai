@@ -89,6 +89,8 @@ def parse_policy_markdown(path: str | Path) -> list[PolicyClause]:
 
 def save_knowledge_index(index: KnowledgeIndex, path: str | Path) -> None:
     _validate_index(index)
+    target_path = Path(path)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": index.schema_version,
         "embedding_model": index.embedding_model,
@@ -104,7 +106,7 @@ def save_knowledge_index(index: KnowledgeIndex, path: str | Path) -> None:
             for indexed_clause in index.clauses
         ],
     }
-    Path(path).write_text(
+    target_path.write_text(
         json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
         encoding="utf-8",
     )
