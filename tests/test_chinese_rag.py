@@ -1,12 +1,14 @@
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from claimguard.conversation import load_conversation
+from claimguard.conversation import Conversation, Message, load_conversation
 from claimguard.knowledge import IndexedClause, KnowledgeIndex, PolicyClause
 from claimguard.qa import generate_qa_report
+from claimguard.rule_runner import RuleMatch
 from claimguard.rules import load_rule_catalog
 
 
@@ -18,6 +20,17 @@ class LiteralEmbeddingClient:
 
     def embed(self, texts):
         return [self.vectors[text] for text in texts]
+
+
+class RecordingEmbeddingClient:
+    model = "recording-test"
+
+    def __init__(self):
+        self.calls = []
+
+    def embed(self, texts):
+        self.calls.append(texts)
+        return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
 
 
 class ChineseRAGTest(unittest.TestCase):
@@ -134,6 +147,51 @@ class ChineseRAGTest(unittest.TestCase):
         self.assertEqual(finding.grounding.clause_id, "24")
         self.assertEqual(finding.grounding.clause_title, "疾病保障范围")
         self.assertIn("疾病保障清单", finding.grounding.clause_text)
+
+    def test_does_not_retrieve_for_nonknowledge_or_unconfigured_knowledge_findings(self):
+        client = RecordingEmbeddingClient()
+        catalog = load_rule_catalog()
+        semantic_conversation = Conversation(
+            id="semantic-only",
+            scenario="Semantic-only finding",
+            messages=[
+                Message(role="customer", content="Hello."),
+                Message(role="agent", content="That is the final result."),
+            ],
+            expected_risks=[],
+        )
+
+        semantic_report = generate_qa_report(
+            semantic_conversation,
+            catalog,
+            knowledge_index=self.index,
+            embedding_client=client,
+        )
+        knowledge_conversation = load_conversation(
+            Path("examples/conversations/zh-deductible-dispute.json")
+        )
+        without_index = generate_qa_report(
+            knowledge_conversation, catalog, embedding_client=client
+        )
+        without_client = generate_qa_report(
+            knowledge_conversation, catalog, knowledge_index=self.index
+        )
+
+        with patch("claimguard.qa.run_rules", return_value=[RuleMatch("PROC-001", "")]):
+            process_report = generate_qa_report(
+                semantic_conversation,
+                catalog,
+                knowledge_index=self.index,
+                embedding_client=client,
+            )
+
+        self.assertEqual([finding.rule_id for finding in semantic_report.findings], ["SEM-003"])
+        self.assertIsNone(semantic_report.findings[0].grounding)
+        self.assertIsNone(without_index.findings[0].grounding)
+        self.assertIsNone(without_client.findings[0].grounding)
+        self.assertEqual([finding.rule_id for finding in process_report.findings], ["PROC-001"])
+        self.assertIsNone(process_report.findings[0].grounding)
+        self.assertEqual(client.calls, [])
 
     def _finding(self, fixture_name, rule_id):
         report = generate_qa_report(

@@ -101,7 +101,9 @@ def _has_chinese_deductible_dispute(text: str) -> bool:
 
 
 def _lacks_deductible_explanation(text: str) -> bool:
-    return not _contains_any(text, ("免赔额", "条款12", "条款 12"))
+    return not (
+        "免赔额" in text and _contains_any(text, ("扣除", "先扣", "扣掉"))
+    )
 
 
 def _has_waiting_period_denial_question(text: str) -> bool:
@@ -111,7 +113,10 @@ def _has_waiting_period_denial_question(text: str) -> bool:
 
 
 def _lacks_waiting_period_explanation(text: str) -> bool:
-    return "等待期" not in text
+    return not (
+        _contains_all(text, ("等待期内", "疾病治疗"))
+        and _contains_any(text, ("不予赔付", "不赔", "拒赔"))
+    )
 
 
 def _has_coverage_denial_question(text: str) -> bool:
@@ -121,7 +126,10 @@ def _has_coverage_denial_question(text: str) -> bool:
 
 
 def _lacks_coverage_explanation(text: str) -> bool:
-    return not _contains_any(text, ("疾病保障清单", "保障范围", "条款24", "条款 24"))
+    return not (
+        _contains_any(text, ("疾病保障清单", "列入疾病"))
+        and _contains_any(text, ("可以申请", "才可以", "可申请", "赔付"))
+    )
 
 
 def _has_accident_definition_question(text: str) -> bool:
@@ -129,7 +137,7 @@ def _has_accident_definition_question(text: str) -> bool:
 
 
 def _lacks_accident_definition(text: str) -> bool:
-    return not _contains_any(text, ("突发", "外来", "非故意", "直接导致"))
+    return not _contains_all(text, ("突发", "外来", "非故意", "直接导致"))
 
 
 def _has_denial_citation_question(text: str) -> bool:
@@ -139,7 +147,10 @@ def _has_denial_citation_question(text: str) -> bool:
 
 
 def _lacks_clause_citation(text: str) -> bool:
-    return "条款" not in text
+    return not (
+        _contains_any(text, ("条款24", "条款 24"))
+        and not _lacks_coverage_explanation(text)
+    )
 
 
 def _contains_all(text: str, phrases: tuple[str, ...]) -> bool:
