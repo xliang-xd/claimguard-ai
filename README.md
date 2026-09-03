@@ -103,6 +103,25 @@ Run the current QA CLI demo:
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
 ```
 
+Build a local policy knowledge index for grounded QA. This requires a
+DashScope API key in `DASHSCOPE_API_KEY`:
+
+```bash
+export DASHSCOPE_API_KEY=your-key
+PYTHONPATH=src python3 -m claimguard.cli index data/knowledge/petcare-plus-policy-zh.md \
+  --output .claimguard/petcare-plus-policy.json
+```
+
+Run QA with the generated index:
+
+```bash
+PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-dispute.json \
+  --index .claimguard/petcare-plus-policy.json
+```
+
+The generated index is stored in `.claimguard/petcare-plus-policy.json`.
+API keys and generated indexes are intentionally not committed.
+
 The command returns a JSON QA report with:
 
 - `conversation_id`: reviewed conversation fixture ID.
