@@ -23,7 +23,7 @@ class LiteralEmbeddingClient:
 
 
 class RecordingEmbeddingClient:
-    model = "recording-test"
+    model = "literal-test"
 
     def __init__(self):
         self.calls = []
@@ -147,6 +147,112 @@ class ChineseRAGTest(unittest.TestCase):
         self.assertEqual(finding.grounding.clause_id, "24")
         self.assertEqual(finding.grounding.clause_title, "疾病保障范围")
         self.assertIn("疾病保障清单", finding.grounding.clause_text)
+
+    def test_denial_citation_uses_waiting_period_clause_when_that_is_the_reason(self):
+        conversation = Conversation(
+            id="waiting-period-citation",
+            scenario="Waiting-period denial clause citation",
+            messages=[
+                Message(
+                    role="customer",
+                    content="等待期内的疾病治疗为什么被拒赔，依据哪条保单条款？",
+                ),
+                Message(
+                    role="agent",
+                    content="因为疾病治疗发生在等待期内，所以不予赔付。",
+                ),
+            ],
+            expected_risks=[],
+        )
+        self.client.vectors[
+            "等待期内的疾病治疗为什么被拒赔，依据哪条保单条款？ Dynamic clause citation for pet insurance denial"
+        ] = [0.0, 1.0, 0.0, 0.0]
+
+        report = generate_qa_report(
+            conversation,
+            load_rule_catalog(),
+            knowledge_index=self.index,
+            embedding_client=self.client,
+        )
+
+        finding = next(item for item in report.findings if item.rule_id == "RAG-005")
+        self.assertEqual(finding.grounding.clause_id, "18")
+
+    def test_accepts_waiting_period_citation_that_matches_the_denial_reason(self):
+        conversation = Conversation(
+            id="waiting-period-citation-complete",
+            scenario="Complete waiting-period denial citation",
+            messages=[
+                Message(
+                    role="customer",
+                    content="等待期内的疾病治疗为什么被拒赔，依据哪条保单条款？",
+                ),
+                Message(
+                    role="agent",
+                    content="依据条款18，等待期内开始的疾病治疗不予赔付。",
+                ),
+            ],
+            expected_risks=[],
+        )
+
+        report = generate_qa_report(conversation, load_rule_catalog())
+
+        self.assertNotIn("RAG-005", [item.rule_id for item in report.findings])
+
+    def test_retrieval_uses_deductible_message_after_an_unrelated_opener(self):
+        conversation = Conversation(
+            id="deductible-after-opener",
+            scenario="Deductible question after unrelated opener",
+            messages=[
+                Message(role="customer", content="你好，我想咨询一下续保流程。"),
+                Message(role="agent", content="请问您想了解哪方面？"),
+                Message(role="customer", content="为什么理赔只赔800元？"),
+                Message(role="agent", content="我暂时无法确认。"),
+            ],
+            expected_risks=[],
+        )
+        client = RecordingEmbeddingClient()
+
+        generate_qa_report(
+            conversation,
+            load_rule_catalog(),
+            knowledge_index=self.index,
+            embedding_client=client,
+        )
+
+        self.assertEqual(
+            client.calls,
+            [["为什么理赔只赔800元？ Claim amount dispute: deductible"]],
+        )
+
+    def test_retrieval_uses_waiting_period_message_after_an_unrelated_opener(self):
+        conversation = Conversation(
+            id="waiting-period-after-opener",
+            scenario="Waiting-period question after unrelated opener",
+            messages=[
+                Message(role="customer", content="你好，我想更新联系信息。"),
+                Message(role="agent", content="可以，请告诉我您的需求。"),
+                Message(
+                    role="customer",
+                    content="为什么等待期内的疾病治疗不赔？",
+                ),
+                Message(role="agent", content="结果就是不能赔。"),
+            ],
+            expected_risks=[],
+        )
+        client = RecordingEmbeddingClient()
+
+        generate_qa_report(
+            conversation,
+            load_rule_catalog(),
+            knowledge_index=self.index,
+            embedding_client=client,
+        )
+
+        self.assertEqual(
+            client.calls,
+            [["为什么等待期内的疾病治疗不赔？ Pre-policy or waiting-period treatment denial"]],
+        )
 
     def test_does_not_retrieve_for_nonknowledge_or_unconfigured_knowledge_findings(self):
         client = RecordingEmbeddingClient()

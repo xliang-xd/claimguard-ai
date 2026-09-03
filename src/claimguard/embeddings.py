@@ -18,6 +18,8 @@ class EmbeddingError(ValueError):
 
 
 class EmbeddingClient(Protocol):
+    model: str
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         ...
 

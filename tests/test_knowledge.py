@@ -22,8 +22,9 @@ from claimguard.knowledge import (
 
 
 class StaticEmbeddingClient:
-    def __init__(self, vectors):
+    def __init__(self, vectors, model="test-model"):
         self.vectors = vectors
+        self.model = model
 
     def embed(self, texts):
         return [self.vectors[text] for text in texts]
@@ -214,6 +215,29 @@ class KnowledgeTest(unittest.TestCase):
                 "为什么只赔一部分",
                 index,
                 StaticEmbeddingClient({"为什么只赔一部分": [1.0]}),
+            )
+
+    def test_retrieval_rejects_embedding_model_mismatch_before_querying(self):
+        index = KnowledgeIndex(
+            schema_version=1,
+            embedding_model="qwen3.7-text-embedding",
+            dimensions=2,
+            clauses=[
+                IndexedClause(PolicyClause("12", "免赔额", "赔付前扣免赔额", "policy.md"), [1.0, 0.0])
+            ],
+        )
+
+        with self.assertRaisesRegex(
+            KnowledgeError,
+            "Embedding model does not match the knowledge index",
+        ):
+            retrieve_clauses(
+                "为什么只赔一部分",
+                index,
+                StaticEmbeddingClient(
+                    {"为什么只赔一部分": [1.0, 0.0]},
+                    model="another-1024-dimensional-model",
+                ),
             )
 
     def test_retrieval_reports_invalid_index_entries_as_knowledge_errors(self):

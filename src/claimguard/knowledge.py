@@ -186,6 +186,8 @@ def retrieve_clauses(
         raise KnowledgeError("top_k must be a positive integer")
 
     _validate_index(index)
+    if index.embedding_model != _embedding_model_name(client):
+        raise KnowledgeError("Embedding model does not match the knowledge index")
     query_vectors = client.embed([query])
     if not isinstance(query_vectors, list) or len(query_vectors) != 1:
         raise KnowledgeError("Query embedding must contain exactly one vector")

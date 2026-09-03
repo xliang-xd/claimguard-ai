@@ -21,10 +21,17 @@ class _LazyDashScopeEmbeddingClient:
     def __init__(self):
         self._client = None
 
+    @property
+    def model(self):
+        return self._get_client().model
+
     def embed(self, texts):
+        return self._get_client().embed(texts)
+
+    def _get_client(self):
         if self._client is None:
             self._client = DashScopeEmbeddingClient()
-        return self._client.embed(texts)
+        return self._client
 
 
 def main(argv: list[str] | None = None) -> int:

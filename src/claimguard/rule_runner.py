@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable, Optional
 
 from claimguard.conversation import Conversation
 
@@ -24,34 +25,44 @@ def run_rules(conversation: Conversation) -> list[RuleMatch]:
     if _has_impatient_tone(agent_text):
         matches.append(RuleMatch("SEM-003", _first_agent_message(conversation)))
 
-    if _has_claim_amount_dispute(customer_text) and not _mentions_deductible_or_clause(
-        agent_text
+    claim_amount_question = _find_customer_message(
+        conversation, _has_claim_amount_dispute
+    )
+    if claim_amount_question and not _mentions_deductible_or_clause(agent_text):
+        matches.append(RuleMatch("RAG-001", claim_amount_question))
+
+    deductible_question = _find_customer_message(
+        conversation, _has_chinese_deductible_dispute
+    )
+    if deductible_question and _lacks_deductible_explanation(agent_text):
+        matches.append(RuleMatch("RAG-001", deductible_question))
+
+    waiting_period_question = _find_customer_message(
+        conversation, _has_waiting_period_denial_question
+    )
+    if waiting_period_question and _lacks_waiting_period_explanation(agent_text):
+        matches.append(RuleMatch("RAG-002", waiting_period_question))
+
+    denial_citation_question = _find_customer_message(
+        conversation, _has_denial_citation_question
+    )
+    denial_reason = _denial_reason(denial_citation_question)
+    if denial_citation_question and denial_reason and _lacks_clause_citation(
+        agent_text, denial_reason
     ):
-        matches.append(RuleMatch("RAG-001", _first_customer_message(conversation)))
+        matches.append(RuleMatch("RAG-005", denial_citation_question))
+    else:
+        coverage_question = _find_customer_message(
+            conversation, _has_coverage_denial_question
+        )
+        if coverage_question and _lacks_coverage_explanation(agent_text):
+            matches.append(RuleMatch("RAG-003", coverage_question))
 
-    if _has_chinese_deductible_dispute(customer_text) and _lacks_deductible_explanation(
-        agent_text
-    ):
-        matches.append(RuleMatch("RAG-001", _first_customer_message(conversation)))
-
-    if _has_waiting_period_denial_question(
-        customer_text
-    ) and _lacks_waiting_period_explanation(agent_text):
-        matches.append(RuleMatch("RAG-002", _first_customer_message(conversation)))
-
-    if _has_denial_citation_question(
-        customer_text
-    ) and _lacks_clause_citation(agent_text):
-        matches.append(RuleMatch("RAG-005", _first_customer_message(conversation)))
-    elif _has_coverage_denial_question(
-        customer_text
-    ) and _lacks_coverage_explanation(agent_text):
-        matches.append(RuleMatch("RAG-003", _first_customer_message(conversation)))
-
-    if _has_accident_definition_question(
-        customer_text
-    ) and _lacks_accident_definition(agent_text):
-        matches.append(RuleMatch("RAG-004", _first_customer_message(conversation)))
+    accident_question = _find_customer_message(
+        conversation, _has_accident_definition_question
+    )
+    if accident_question and _lacks_accident_definition(agent_text):
+        matches.append(RuleMatch("RAG-004", accident_question))
 
     return matches
 
@@ -74,6 +85,15 @@ def _first_customer_message(conversation: Conversation) -> str:
         if message.role == "customer":
             return message.content
     return ""
+
+
+def _find_customer_message(
+    conversation: Conversation, predicate: Callable[[str], bool]
+) -> Optional[str]:
+    for message in conversation.messages:
+        if message.role == "customer" and predicate(message.content.lower()):
+            return message.content
+    return None
 
 
 def _has_claim_amount_dispute(text: str) -> bool:
@@ -120,7 +140,11 @@ def _lacks_waiting_period_explanation(text: str) -> bool:
 
 
 def _has_coverage_denial_question(text: str) -> bool:
-    return "为什么" in text and _contains_any(text, ("疾病", "皮肤病", "病症")) and _contains_any(
+    return "为什么" in text and _has_coverage_denial_reason(text)
+
+
+def _has_coverage_denial_reason(text: str) -> bool:
+    return _contains_any(text, ("疾病", "皮肤病", "病症")) and _contains_any(
         text, ("保障范围", "不在保障", "不能理赔", "不能赔")
     )
 
@@ -146,11 +170,31 @@ def _has_denial_citation_question(text: str) -> bool:
     )
 
 
-def _lacks_clause_citation(text: str) -> bool:
-    return not (
-        _contains_any(text, ("条款24", "条款 24"))
-        and not _lacks_coverage_explanation(text)
-    )
+def _denial_reason(text: Optional[str]) -> Optional[str]:
+    if text is None:
+        return None
+    if _has_waiting_period_denial_question(text):
+        return "waiting_period"
+    if _has_coverage_denial_reason(text):
+        return "coverage"
+    return None
+
+
+def _lacks_clause_citation(text: str, denial_reason: str) -> bool:
+    if denial_reason == "waiting_period":
+        return not (
+            _mentions_clause(text, "18")
+            and not _lacks_waiting_period_explanation(text)
+        )
+    if denial_reason == "coverage":
+        return not (
+            _mentions_clause(text, "24") and not _lacks_coverage_explanation(text)
+        )
+    return True
+
+
+def _mentions_clause(text: str, clause_id: str) -> bool:
+    return _contains_any(text, (f"条款{clause_id}", f"条款 {clause_id}"))
 
 
 def _contains_all(text: str, phrases: tuple[str, ...]) -> bool:
