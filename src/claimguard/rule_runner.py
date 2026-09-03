@@ -127,7 +127,11 @@ def _lacks_deductible_explanation(text: str) -> bool:
 
 
 def _has_waiting_period_denial_question(text: str) -> bool:
-    return _contains_all(text, ("为什么", "等待期")) and _contains_any(
+    return "为什么" in text and _has_waiting_period_denial_reason(text)
+
+
+def _has_waiting_period_denial_reason(text: str) -> bool:
+    return "等待期" in text and _contains_any(
         text, ("不赔", "拒赔", "不予赔付")
     )
 
@@ -173,7 +177,7 @@ def _has_denial_citation_question(text: str) -> bool:
 def _denial_reason(text: Optional[str]) -> Optional[str]:
     if text is None:
         return None
-    if _has_waiting_period_denial_question(text):
+    if _has_waiting_period_denial_reason(text):
         return "waiting_period"
     if _has_coverage_denial_reason(text):
         return "coverage"

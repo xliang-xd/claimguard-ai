@@ -178,6 +178,36 @@ class ChineseRAGTest(unittest.TestCase):
         finding = next(item for item in report.findings if item.rule_id == "RAG-005")
         self.assertEqual(finding.grounding.clause_id, "18")
 
+    def test_denial_citation_without_why_uses_waiting_period_clause(self):
+        conversation = Conversation(
+            id="waiting-period-citation-without-why",
+            scenario="Waiting-period denial citation without a why question",
+            messages=[
+                Message(
+                    role="customer",
+                    content="等待期内的疾病治疗被拒赔，依据哪条保单条款？",
+                ),
+                Message(
+                    role="agent",
+                    content="因为疾病治疗发生在等待期内，所以不予赔付。",
+                ),
+            ],
+            expected_risks=[],
+        )
+        self.client.vectors[
+            "等待期内的疾病治疗被拒赔，依据哪条保单条款？ Dynamic clause citation for pet insurance denial"
+        ] = [0.0, 1.0, 0.0, 0.0]
+
+        report = generate_qa_report(
+            conversation,
+            load_rule_catalog(),
+            knowledge_index=self.index,
+            embedding_client=self.client,
+        )
+
+        finding = next(item for item in report.findings if item.rule_id == "RAG-005")
+        self.assertEqual(finding.grounding.clause_id, "18")
+
     def test_accepts_waiting_period_citation_that_matches_the_denial_reason(self):
         conversation = Conversation(
             id="waiting-period-citation-complete",
