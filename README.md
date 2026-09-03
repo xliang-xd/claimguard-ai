@@ -12,8 +12,9 @@ ClaimGuard AI is a focused GitHub demo project for text-based insurance service.
 ![ClaimGuard AI architecture](docs/assets/architecture.svg)
 
 The current core combines deterministic QA with v0.3 RAG grounding for the
-supported Chinese policy scenarios. LLM judges and a web UI remain future
-milestones; the QA report contract remains stable.
+supported Chinese policy scenarios. v0.3 retrieves clause evidence but does
+not run LLM judges, a citation judge, or reranking; those remain future
+milestones. The QA report contract remains stable.
 
 ## V1 Product
 
@@ -35,24 +36,31 @@ The QA workflow reviews completed conversations.
 - Show violated rule IDs, risk levels, evidence, and reasoning.
 - Suggest a better reply grounded in the correct policy clause.
 
-## V1 Rule Matrix
+## V1 Target Rule Matrix
+
+This is the intended V1 rule design, not a list of active v0.3 runtime
+judges. v0.3 implements deterministic matching and retrieval evidence for
+`RAG-001` through `RAG-005`; LLM and citation-judge detection remains
+deferred.
 
 | Rule ID | Rule | Category | Risk | Detection |
 | --- | --- | --- | --- | --- |
-| SEM-001 | Counter-questioning the customer | Semantic | Critical | LLM judge |
-| SEM-002 | Answer does not address customer intent | Semantic | Critical | Intent + LLM judge |
-| SEM-003 | Impatient service tone | Semantic | Critical | LLM judge |
-| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Intent + LLM judge |
-| SEM-005 | Unapproved commitment | Semantic | Critical | LLM judge |
-| PROC-001 | Incomplete identity disclosure | Process | High | Rule + LLM |
-| PROC-002 | Missing closing statement | Process | Low | Rule + LLM |
-| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | RAG + LLM judge |
-| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | RAG + LLM judge |
-| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | RAG + LLM judge |
-| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | RAG + LLM judge |
-| RAG-005 | Dynamic clause citation for pet insurance denial | Knowledge-grounded | High | Intent + RAG + Citation judge |
+| SEM-001 | Counter-questioning the customer | Semantic | Critical | LLM judge (future) |
+| SEM-002 | Answer does not address customer intent | Semantic | Critical | Intent + LLM judge (future) |
+| SEM-003 | Impatient service tone | Semantic | Critical | LLM judge (future) |
+| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Intent + LLM judge (future) |
+| SEM-005 | Unapproved commitment | Semantic | Critical | LLM judge (future) |
+| PROC-001 | Incomplete identity disclosure | Process | High | Rule + LLM (future) |
+| PROC-002 | Missing closing statement | Process | Low | Rule + LLM (future) |
+| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
+| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
+| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
+| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
+| RAG-005 | Dynamic clause citation for pet insurance denial | Knowledge-grounded | High | Intent + RAG evidence + Citation judge (future) |
 
-`RAG-005` is the V1 hero case because it demonstrates intent routing, retrieval, citation accuracy, and grounded answer quality in one scenario.
+`RAG-005` is the V1 target hero case because it is intended to demonstrate
+intent routing, retrieval, citation accuracy, and grounded answer quality in
+one scenario. In v0.3 it attaches retrieved clause evidence only.
 
 ## Technical Direction
 
@@ -70,7 +78,7 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 Current package version: `0.3.0`.
 
-M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM and RAG behavior are still under development.
+M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM behavior is still under development.
 
 `v0.2.1` is a documentation patch that adds README architecture and roadmap diagrams.
 
@@ -80,7 +88,8 @@ orchestration and domestic model defaults in `docs/agent-orchestration.md`.
 `v0.3.0` adds deterministic Chinese policy grounding: a policy parser and
 validated local index, Qwen `qwen3.7-text-embedding` retrieval, five supported
 RAG rules, retrieval evidence on QA findings, and backward-compatible CLI
-commands for index creation and grounded QA.
+commands for index creation and grounded QA. It does not add LLM judges,
+reranking, or citation-accuracy judgment.
 
 ## Repository Layout
 

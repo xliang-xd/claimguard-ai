@@ -6,25 +6,26 @@ judgment, and clear QA evidence instead of a large multi-agent chat graph.
 
 ## Current State
 
-The current `v0.3.0` codebase keeps its deterministic QA workflow and adds a
-narrow, evidence-producing RAG path for supported Chinese policy scenarios:
+The current `v0.3.0` codebase keeps its deterministic QA workflow and adds two
+separate RAG operations for supported Chinese policy scenarios:
 
 ```text
-QA CLI
-  -> Conversation Loader
-  -> Rule Catalog
-  -> Deterministic Rule Runner
-  -> optional Policy Parser + Local Knowledge Index
-  -> optional Qwen Embedding Retrieval
+Index construction (explicit `claimguard index` command)
+  -> Policy Parser -> Qwen Embedding -> Local Knowledge Index
+
+Grounded QA (only with `--index`)
+  -> Conversation Loader -> Rule Catalog -> Deterministic Rule Runner
+  -> Query Embedding -> Existing Local Knowledge Index -> Retrieval Evidence
   -> QA Report Builder
 ```
 
 This stage proves the basic quality-inspection contract: completed
-conversation in, structured QA report out. When `--index` is supplied, matched
-Chinese RAG findings include retrieved-clause evidence. The legacy invocation
-remains available without an index or a model call.
+conversation in, structured QA report out. Index construction is not part of
+normal QA execution. When `--index` is supplied, matched Chinese RAG findings
+include retrieved-clause evidence. The legacy invocation remains available
+without an index or a model call.
 
-## Target Topology
+## Future Target Topology
 
 The target system exposes two product agents:
 
@@ -38,6 +39,9 @@ separate product-facing agents.
 ![ClaimGuard AI agent orchestration](assets/agent-orchestration.svg)
 
 ## Product Agents
+
+The product-agent descriptions below are future topology. v0.3 implements the
+deterministic CLI workflow above, not LLM-backed QA or Copilot agents.
 
 ### ClaimGuard Orchestrator
 

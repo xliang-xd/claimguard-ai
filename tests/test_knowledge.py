@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import sys
 import tempfile
 import unittest
@@ -29,8 +30,21 @@ class StaticEmbeddingClient:
 
 
 class KnowledgeMetadataTest(unittest.TestCase):
-    def test_public_package_version_matches_v0_3_release(self):
+    def test_package_and_project_metadata_match_v0_3_release(self):
+        project_metadata = (
+            Path(__file__).resolve().parents[1] / "pyproject.toml"
+        ).read_text(encoding="utf-8")
+        project_version_match = re.search(
+            r'^version\s*=\s*"(?P<version>[^"]+)"\s*$',
+            project_metadata,
+            flags=re.MULTILINE,
+        )
+
+        self.assertIsNotNone(project_version_match)
+        project_version = project_version_match.group("version")
         self.assertEqual(claimguard.__version__, "0.3.0")
+        self.assertEqual(project_version, "0.3.0")
+        self.assertEqual(project_version, claimguard.__version__)
 
 
 class KnowledgeTest(unittest.TestCase):
