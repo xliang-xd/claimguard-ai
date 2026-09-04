@@ -19,7 +19,10 @@ ClaimGuard AI uses Git release tags in the form `vX.Y.Z`.
   milestone.
 - The ignored local `.env` configuration fallback is a narrow operator setup
   improvement, so it is `v0.3.1`.
-- Further patch-only follow-ups should use `v0.3.2`, `v0.3.3`, and so on.
+- M4 Semantic QA adds an opt-in structured model workflow, four active
+  semantic rules, validated quote evidence, and a user-facing CLI flag, so it
+  is the `v0.4.0` feature milestone.
+- Further patch-only follow-ups should use `v0.4.1`, `v0.4.2`, and so on.
 
 ## Practical Rules
 

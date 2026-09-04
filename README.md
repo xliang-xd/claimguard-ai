@@ -11,10 +11,11 @@ ClaimGuard AI is a focused GitHub demo project for text-based insurance service.
 
 ![ClaimGuard AI architecture](docs/assets/architecture.svg)
 
-The current core combines deterministic QA with v0.3 RAG grounding for the
-supported Chinese policy scenarios. v0.3 retrieves clause evidence but does
-not run LLM judges, a citation judge, or reranking; those remain future
-milestones. The QA report contract remains stable.
+The current `v0.4.0` core combines deterministic QA, optional RAG grounding,
+and an opt-in semantic judge for completed Chinese conversations. The semantic
+judge runs once only when an operator supplies `--llm`; the default CLI remains
+offline. Citation judgment, reranking, Copilot generation, and web/API
+endpoints remain future milestones. The QA report contract remains stable.
 
 ## V1 Product
 
@@ -38,29 +39,30 @@ The QA workflow reviews completed conversations.
 
 ## V1 Target Rule Matrix
 
-This is the intended V1 rule design, not a list of active v0.3 runtime
-judges. v0.3 implements deterministic matching and retrieval evidence for
-`RAG-001` through `RAG-005`; LLM and citation-judge detection remains
-deferred.
+`SEM-002` through `SEM-005` are active when the operator explicitly supplies
+`--llm`. The deterministic runner and RAG grounding remain available without a
+semantic model call. `SEM-001`, process normalization, and citation judgment
+remain deferred.
 
 | Rule ID | Rule | Category | Risk | Detection |
 | --- | --- | --- | --- | --- |
 | SEM-001 | Counter-questioning the customer | Semantic | Critical | LLM judge (future) |
-| SEM-002 | Answer does not address customer intent | Semantic | Critical | Intent + LLM judge (future) |
-| SEM-003 | Impatient service tone | Semantic | Critical | LLM judge (future) |
-| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Intent + LLM judge (future) |
-| SEM-005 | Unapproved commitment | Semantic | Critical | LLM judge (future) |
+| SEM-002 | Answer does not address customer intent | Semantic | Critical | Qwen semantic judge (`--llm`) |
+| SEM-003 | Impatient service tone | Semantic | Critical | Qwen semantic judge (`--llm`) |
+| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Qwen semantic judge (`--llm`) |
+| SEM-005 | Unapproved commitment | Semantic | Critical | Qwen semantic judge (`--llm`) |
 | PROC-001 | Incomplete identity disclosure | Process | High | Rule + LLM (future) |
 | PROC-002 | Missing closing statement | Process | Low | Rule + LLM (future) |
-| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
-| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
-| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
-| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | RAG evidence + LLM judge (future) |
+| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | Deterministic RAG evidence |
+| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | Deterministic RAG evidence |
+| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | Deterministic RAG evidence |
+| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | Deterministic RAG evidence |
 | RAG-005 | Dynamic clause citation for pet insurance denial | Knowledge-grounded | High | Intent + RAG evidence + Citation judge (future) |
 
 `RAG-005` is the V1 target hero case because it is intended to demonstrate
 intent routing, retrieval, citation accuracy, and grounded answer quality in
-one scenario. In v0.3 it attaches retrieved clause evidence only.
+one scenario. In v0.4 it attaches retrieved clause evidence only; citation
+accuracy remains a future Citation Judge capability.
 
 ## Technical Direction
 
@@ -76,7 +78,7 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 ## Current Milestone
 
-Current package version: `0.3.1`.
+Current package version: `0.4.0`.
 
 M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM behavior is still under development.
 
@@ -93,6 +95,12 @@ reranking, or citation-accuracy judgment.
 
 `v0.3.1` adds an ignored project-local `.env` fallback for Model Studio
 configuration. Explicit process environment variables still take priority.
+
+`v0.4.0` adds opt-in Semantic QA for `SEM-002` through `SEM-005`. With
+`--llm`, one Qwen `qwen3.7-plus` structured-output request evaluates a
+completed conversation. A semantic finding is emitted only when its evidence
+is an exact, complete customer-service message in that conversation; provider
+or contract failures return an error instead of unvalidated findings.
 
 ## Repository Layout
 
@@ -145,6 +153,19 @@ explicit process environment variable overrides the same value in `.env`.
 
 See `docs/m3-rag-grounding.md` for the supported Chinese cases, index
 lifecycle, operator commands, and current limitations.
+
+Run semantic QA against the dedicated Chinese fixture:
+
+```bash
+PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-semantic-qa.json --llm
+```
+
+This is an explicit paid network call to Model Studio. It reuses the ignored
+local `.env` configuration (or explicit process environment variables), so no
+API key belongs in the command, fixture, or Git history. The semantic judge
+requires complete quote-backed evidence from an agent message. If its request
+or response cannot be validated, the command fails without producing semantic
+findings. See `docs/m4-semantic-qa.md` for the operating contract and limits.
 
 The command returns a JSON QA report with:
 

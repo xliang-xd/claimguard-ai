@@ -31,7 +31,7 @@ class StaticEmbeddingClient:
 
 
 class KnowledgeMetadataTest(unittest.TestCase):
-    def test_package_and_project_metadata_match_v0_3_1_release(self):
+    def test_package_and_project_metadata_match_v0_4_0_release(self):
         project_metadata = (
             Path(__file__).resolve().parents[1] / "pyproject.toml"
         ).read_text(encoding="utf-8")
@@ -43,8 +43,8 @@ class KnowledgeMetadataTest(unittest.TestCase):
 
         self.assertIsNotNone(project_version_match)
         project_version = project_version_match.group("version")
-        self.assertEqual(claimguard.__version__, "0.3.1")
-        self.assertEqual(project_version, "0.3.1")
+        self.assertEqual(claimguard.__version__, "0.4.0")
+        self.assertEqual(project_version, "0.4.0")
         self.assertEqual(project_version, claimguard.__version__)
 
 

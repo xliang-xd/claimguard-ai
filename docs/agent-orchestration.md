@@ -1,188 +1,103 @@
 # Agent Orchestration
 
-ClaimGuard AI uses a compact agent architecture for insurance text customer
-service. The project should demonstrate reliable workflow design, grounded
-judgment, and clear QA evidence instead of a large multi-agent chat graph.
+ClaimGuard AI keeps its agent topology compact: one implemented QA workflow for
+completed conversations, plus a future Copilot workflow for active customer
+service. Specialized capabilities remain workflow nodes, not product-facing
+agents.
 
-## Current State
-
-The current `v0.3.1` codebase keeps its deterministic QA workflow and adds two
-separate RAG operations for supported Chinese policy scenarios:
+## Current v0.4.0 QA Workflow
 
 ```text
-Index construction (explicit `claimguard index` command)
-  -> Policy Parser -> Qwen Embedding -> Local Knowledge Index
-
-Grounded QA (only with `--index`)
-  -> Conversation Loader -> Rule Catalog -> Deterministic Rule Runner
-  -> Query Embedding -> Existing Local Knowledge Index -> Retrieval Evidence
-  -> QA Report Builder
+Conversation
+  -> Deterministic Rules + optional RAG retrieval
+  -> (--llm only) Semantic Judge
+  -> Evidence Validator + Deduplicator
+  -> QA JSON Report
 ```
 
-This stage proves the basic quality-inspection contract: completed
-conversation in, structured QA report out. Index construction is not part of
-normal QA execution. When `--index` is supplied, matched Chinese RAG findings
-include retrieved-clause evidence. The legacy invocation remains available
-without an index or a model call.
+The deterministic rule runner is always executed. Optional RAG contributes
+retrieved clause evidence only when a local index is supplied. `--llm` creates
+one Qwen semantic judge for the completed conversation; otherwise no semantic
+model client or request exists. The validator accepts semantic evidence only
+when it is one complete agent message in the transcript, and the deduplicator
+preserves an existing deterministic result for the same rule ID.
 
-Model Studio configuration can come from a Git-ignored project-local `.env`;
-explicit process environment variables take priority over that local fallback.
+Index construction is a separate explicit operation:
 
-## Future Target Topology
+```text
+Policy Markdown -> Policy Parser -> Qwen Embedding -> ignored Local Knowledge Index
+```
 
-The target system exposes two product agents:
-
-- `QA Agent`: reviews completed conversations after the service interaction.
-- `Copilot Agent`: assists a service representative during an active chat.
-
-Shared capabilities such as intent routing, retrieval, reranking, citation
-checking, and report building stay as workflow nodes or tools. They are not
-separate product-facing agents.
+It is not part of the default QA command. Query-time RAG reads the existing
+index only when the operator supplies `--index`.
 
 ![ClaimGuard AI agent orchestration](assets/agent-orchestration.svg)
 
 ## Product Agents
 
-The product-agent descriptions below are future topology. v0.3 implements the
-deterministic CLI workflow above, not LLM-backed QA or Copilot agents.
+### QA Agent (Current)
 
-### ClaimGuard Orchestrator
+The implemented QA Agent reviews completed conversations and produces a stable
+JSON report with score, rule findings, evidence, recommendation, optional
+retrieved clause, and optional semantic `reasoning`, `confidence`, and
+`judge` fields.
 
-The orchestrator owns product-level routing and final response shape. It
-selects the correct business workflow based on the input type:
+Its active semantic scope is intentionally narrow: `SEM-002` through
+`SEM-005` cover answer relevance, impatient tone, complaint acknowledgement,
+and unsupported commitments. A model error produces no unvalidated semantic
+finding.
 
-- A completed text conversation goes to `QA Agent`.
-- An active customer message goes to `Copilot Agent`.
+### Copilot Agent (Deferred)
 
-The orchestrator keeps the report and suggestion contracts stable for CLI,
-API, and future web UI entry points.
-
-### QA Agent
-
-The QA Agent handles after-call text quality inspection.
-
-Input:
-
-```text
-completed conversation
-rule catalog
-optional policy knowledge
-```
-
-Output:
-
-```text
-score
-findings
-violated_rules
-risk_level
-evidence
-reasoning
-recommendation
-retrieved_clause
-citation_accuracy
-```
-
-Internal nodes:
-
-- `Intent Router`: identifies the customer's core issue, such as claim amount
-  dispute, denial explanation, complaint, or policy lookup.
-- `Rule Selector`: chooses the relevant semantic, process, and
-  knowledge-grounded rules for the scenario.
-- `Knowledge Retriever`: retrieves policy clauses for RAG-backed rules.
-- `Reranker`: reranks candidate clauses before judgment.
-- `QA Judge`: evaluates semantic service quality, relevance, attitude, and
-  process compliance.
-- `Citation Judge`: checks whether the service answer uses the correct clause
-  and explains it accurately.
-- `Report Builder`: assembles the final QA report.
-
-### Copilot Agent
-
-The Copilot Agent handles live service assistance.
-
-Input:
-
-```text
-current customer message
-conversation context
-policy knowledge
-```
-
-Output:
-
-```text
-customer_intent
-recommended_clause
-suggested_reply
-risk_warnings
-phrases_to_avoid
-citation_check
-```
-
-Internal nodes:
-
-- `Intent Router`: identifies what the customer is asking now.
-- `Knowledge Retriever`: finds relevant policy clauses.
-- `Reranker`: ranks retrieved clauses for the current intent.
-- `Risk Guard`: detects risky wording, unsupported commitments, and missing
-  appeasement.
-- `Reply Writer`: drafts a clear, compliant, clause-grounded response.
-- `Citation Checker`: verifies that the suggested reply is grounded in the
-  retrieved clause.
+The future Copilot Agent will assist a service representative during an active
+chat. Its intended outputs are customer intent, recommended clause, suggested
+reply, and risk warnings. It is not implemented in `v0.4.0`.
 
 ## Domestic Model Defaults
 
 For cost and compliance-sensitive insurance service scenarios, ClaimGuard AI
-defaults to a China-local model stack.
+defaults to Alibaba Cloud Model Studio / Qwen. The intended deployment region
+is mainland China, such as `cn-beijing`, when API access is configured.
 
-| Component | Default Model | Purpose |
+| Capability | Default Model | v0.4.0 Status |
 | --- | --- | --- |
-| Intent Router | `qwen3.8-flash` | Low-cost routing and classification |
-| Rule Selector | `qwen3.8-flash` | Fast rule selection and scenario narrowing |
-| QA Judge | `qwen3.7-plus` | Semantic QA judgment and structured reasoning |
-| Citation Judge | `qwen3.7-plus` | Clause accuracy and completeness checks |
-| Risk Guard | `qwen3.7-plus` | Compliance-sensitive risk detection |
-| Reply Writer | `qwen3.7-plus` | Copilot response generation |
-| Hard Case Judge | `qwen3.8-max` | Complex demo cases and difficult disputes |
-| Embedding | `qwen3.7-text-embedding` | v0.3 dense retrieval for policy clauses |
-| Reranking | `qwen3-rerank` | Deferred; not used by the v0.3 runtime |
+| Semantic Judge | `qwen3.7-plus` | Active only with `--llm` |
+| Embedding | `qwen3.7-text-embedding` | Active for index creation and `--index` retrieval |
+| Intent Router | `qwen3.8-flash` | Deferred |
+| Rule Selector | `qwen3.8-flash` | Deferred |
+| Citation Judge | `qwen3.7-plus` | Deferred |
+| Risk Guard | `qwen3.7-plus` | Deferred with Copilot |
+| Reply Writer | `qwen3.7-plus` | Deferred with Copilot |
+| Hard Case Judge | `qwen3.8-max` | Deferred |
+| Reranking | `qwen3-rerank` | Deferred |
 
-The default provider is Alibaba Cloud Model Studio / Qwen. The default region
-should be a mainland China region, such as `cn-beijing`, when API access is
-configured.
+The semantic request uses strict JSON Schema, `temperature: 0`, and disabled
+thinking. A local `CLAIMGUARD_SEMANTIC_MODEL` setting may override the semantic
+model. Configuration stays in ignored `.env` or explicit process environment
+variables; credentials are never report data or repository content.
 
-References:
+## Deferred Topology
 
-- Qwen model selection: <https://docs.qwencloud.com/developer-guides/getting-started/model-selection>
-- Qwen embeddings: <https://docs.qwencloud.com/developer-guides/embeddings/embedding>
-- Qwen reranking: <https://docs.qwencloud.com/developer-guides/embeddings/reranking>
-- Qwen structured output: <https://docs.qwencloud.com/developer-guides/text-generation/structured-output>
-- Alibaba Cloud Model Studio product notes: <https://help.aliyun.com/zh/model-studio/what-is-model-studio>
+Citation Judge, reranking, Copilot generation, persistent storage, and web/API
+endpoints are intentionally deferred. RAG retrieval evidence identifies a
+selected clause; it is not a citation-accuracy finding. The v0.4 diagram shows
+these as future extensions rather than active runtime components.
 
 ## Design Principles
 
 - Keep the public architecture to two product agents.
-- Keep specialized steps as tools or workflow nodes unless they need their own
-  state, policy, or ownership boundary.
+- Keep specialized steps as workflow nodes unless they need separate state,
+  policy, or ownership.
 - Prefer structured JSON outputs for judgments and reports.
-- Keep RAG evidence explicit: retrieved clause, clause ID, source document, and
-  citation judgment should be visible in the final report.
-- Treat v0.3 retrieval evidence as deterministic context, not an LLM citation
-  judgment. Reranking and LLM citation checks are future work.
-- Treat deterministic rules, LLM judges, RAG, and evaluation fixtures as
-  separate layers so each can be tested independently.
-- Use China-local providers by default for cost and compliance; document any
-  provider change before implementation.
+- Keep evidence traceable: deterministic matches, complete semantic quotes,
+  and retrieved clause metadata stay visible in the report.
+- Keep deterministic rules, semantic judgment, RAG, and fixtures independently
+  testable.
+- Use China-local providers by default for cost and compliance; document a
+  provider or model change before implementation.
 
 ## Update Policy
 
-Update this document and the orchestration diagram whenever any of these change:
-
-- product-facing agent topology
-- model provider or default model names
-- embedding or reranking strategy
-- QA report contract
-- Copilot suggestion contract
-- RAG evidence format
-- compliance assumptions about data locality or model usage
+Update this document and the orchestration diagram whenever product-agent
+topology, default models, report contract, RAG evidence format, local-data
+assumptions, or deferred-vs-active boundaries change.
