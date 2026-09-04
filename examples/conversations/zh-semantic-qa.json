@@ -19,5 +19,5 @@
       "content": "您的理赔明天一定到账。"
     }
   ],
-  "expected_risks": ["SEM-004", "SEM-005"]
+  "expected_risks": ["SEM-002", "SEM-003", "SEM-004", "SEM-005"]
 }

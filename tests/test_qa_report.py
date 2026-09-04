@@ -80,6 +80,29 @@ class QAReportTest(unittest.TestCase):
                 ),
             )
 
+    def test_rejects_semantic_evidence_that_is_a_customer_message(self):
+        conversation = load_conversation(
+            Path("examples/conversations/zh-semantic-qa.json")
+        )
+
+        with self.assertRaises(SemanticJudgeError):
+            generate_qa_report(
+                conversation,
+                load_rule_catalog(),
+                semantic_judge=FakeJudge(
+                    [
+                        SemanticJudgment(
+                            rule_id="SEM-004",
+                            violated=True,
+                            evidence="我已经等了很久，请给我明确的处理时间。",
+                            reasoning="客服没有回应客户的投诉或安抚担忧。",
+                            recommendation="先承认客户的担忧，再说明下一步处理方式。",
+                            confidence="medium",
+                        )
+                    ]
+                ),
+            )
+
     def test_skips_semantic_judgment_for_an_existing_deterministic_finding(self):
         conversation = load_conversation(
             Path("examples/conversations/claim-amount-dispute.json")
