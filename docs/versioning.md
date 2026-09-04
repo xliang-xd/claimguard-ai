@@ -17,7 +17,9 @@ ClaimGuard AI uses Git release tags in the form `vX.Y.Z`.
 - M3 RAG grounding adds a policy index, embedding retrieval, grounded QA
   evidence, and user-facing CLI commands, so it is the `v0.3.0` feature
   milestone.
-- Patch-only follow-ups after this should use `v0.3.1`, `v0.3.2`, and so on.
+- The ignored local `.env` configuration fallback is a narrow operator setup
+  improvement, so it is `v0.3.1`.
+- Further patch-only follow-ups should use `v0.3.2`, `v0.3.3`, and so on.
 
 ## Practical Rules
 

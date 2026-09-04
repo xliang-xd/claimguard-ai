@@ -6,7 +6,7 @@ judgment, and clear QA evidence instead of a large multi-agent chat graph.
 
 ## Current State
 
-The current `v0.3.0` codebase keeps its deterministic QA workflow and adds two
+The current `v0.3.1` codebase keeps its deterministic QA workflow and adds two
 separate RAG operations for supported Chinese policy scenarios:
 
 ```text
@@ -24,6 +24,9 @@ conversation in, structured QA report out. Index construction is not part of
 normal QA execution. When `--index` is supplied, matched Chinese RAG findings
 include retrieved-clause evidence. The legacy invocation remains available
 without an index or a model call.
+
+Model Studio configuration can come from a Git-ignored project-local `.env`;
+explicit process environment variables take priority over that local fallback.
 
 ## Future Target Topology
 

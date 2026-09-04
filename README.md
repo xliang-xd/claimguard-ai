@@ -76,7 +76,7 @@ The project should show product judgment, not agent sprawl. A compact workflow i
 
 ## Current Milestone
 
-Current package version: `0.3.0`.
+Current package version: `0.3.1`.
 
 M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM behavior is still under development.
 
@@ -90,6 +90,9 @@ validated local index, Qwen `qwen3.7-text-embedding` retrieval, five supported
 RAG rules, retrieval evidence on QA findings, and backward-compatible CLI
 commands for index creation and grounded QA. It does not add LLM judges,
 reranking, or citation-accuracy judgment.
+
+`v0.3.1` adds an ignored project-local `.env` fallback for Model Studio
+configuration. Explicit process environment variables still take priority.
 
 ## Repository Layout
 
@@ -119,11 +122,12 @@ Run the current QA CLI demo:
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
 ```
 
-Build a local policy knowledge index for grounded QA. This requires a
-DashScope API key in `DASHSCOPE_API_KEY`:
+Build a local policy knowledge index for grounded QA. Copy the local template,
+then put a Model Studio API key in `.env`. The file is ignored by Git:
 
 ```bash
-export DASHSCOPE_API_KEY=your-key
+cp .env.example .env
+# Edit .env locally: DASHSCOPE_API_KEY=your-key
 PYTHONPATH=src python3 -m claimguard.cli index data/knowledge/petcare-plus-policy-zh.md \
   --output .claimguard/petcare-plus-policy.json
 ```
@@ -136,7 +140,8 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-di
 ```
 
 The generated index is stored in `.claimguard/petcare-plus-policy.json`.
-API keys and generated indexes are intentionally not committed.
+API keys and generated indexes are intentionally not committed. When set, an
+explicit process environment variable overrides the same value in `.env`.
 
 See `docs/m3-rag-grounding.md` for the supported Chinese cases, index
 lifecycle, operator commands, and current limitations.

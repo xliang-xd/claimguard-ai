@@ -6,6 +6,8 @@ import os
 from typing import Any, Callable, Optional, Protocol
 from urllib import error, request
 
+from claimguard.config import load_project_environment
+
 
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen3.7-text-embedding"
@@ -29,6 +31,7 @@ Transport = Callable[[request.Request, int], Any]
 
 class DashScopeEmbeddingClient:
     def __init__(self, transport: Optional[Transport] = None):
+        load_project_environment()
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key:
             raise EmbeddingError("DASHSCOPE_API_KEY is required for embeddings")

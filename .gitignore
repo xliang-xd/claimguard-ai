@@ -10,5 +10,6 @@ build/
 *.egg-info/
 .env
 .env.*
+!.env.example
 .worktrees/
 .claimguard/

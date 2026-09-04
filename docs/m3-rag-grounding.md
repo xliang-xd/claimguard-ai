@@ -33,11 +33,13 @@ LLM judges and LLM citation judgment are also deferred.
 
 ## Operator Setup
 
-Set `DASHSCOPE_API_KEY` in the operator's local process without committing or
-printing it, then create an index from the committed synthetic policy fixture:
+Copy `.env.example` to the ignored `.env` file, set `DASHSCOPE_API_KEY` to a
+local Model Studio key, then create an index from the committed synthetic
+policy fixture:
 
 ```bash
-export DASHSCOPE_API_KEY=your-key
+cp .env.example .env
+# Edit .env locally: DASHSCOPE_API_KEY=your-key
 PYTHONPATH=src python3 -m claimguard.cli index data/knowledge/petcare-plus-policy-zh.md \
   --output .claimguard/petcare-plus-policy.json
 ```
@@ -49,10 +51,11 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-di
   --index .claimguard/petcare-plus-policy.json
 ```
 
-For a manual real-API release check, run the two commands above only when the
-key is already configured in the current process. Inspect the command output
-for a successful index and clause evidence, but do not print, log, or otherwise
-expose the key. The legacy command requires neither an index nor a key:
+For a manual real-API release check, run the two commands above after the key
+is present in `.env` or the current process. Process environment variables take
+priority over `.env`. Inspect the command output for a successful index and
+clause evidence, but do not print, log, or otherwise expose the key. The legacy
+command requires neither an index nor a key:
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
