@@ -245,7 +245,7 @@ def _parse_judgment(finding: object, agent_messages: list[str]) -> SemanticJudgm
             not evidence.strip()
             or not reasoning.strip()
             or not recommendation.strip()
-            or not any(evidence in message for message in agent_messages)
+            or evidence not in agent_messages
         ):
             raise SemanticJudgeError("Semantic judge response was invalid")
     elif evidence or reasoning or recommendation:

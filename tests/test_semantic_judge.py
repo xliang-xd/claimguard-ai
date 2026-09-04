@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -171,6 +171,14 @@ class SemanticJudgeClientTest(unittest.TestCase):
                 with self.assertRaises(SemanticJudgeError):
                     client.judge(self.conversation)
 
+    def test_rejects_evidence_that_is_only_a_fragment_of_an_agent_message(self):
+        findings = self._findings()
+        findings[-1]["evidence"] = "将在明天到账。"
+        client = self._client(OneShotTransport(self._response(findings)))
+
+        with self.assertRaises(SemanticJudgeError):
+            client.judge(self.conversation)
+
     def test_http_failure_does_not_disclose_authorization_value(self):
         def failing_transport(request, timeout):
             raise HTTPError(request.full_url, 503, "unavailable", None, None)
@@ -180,6 +188,33 @@ class SemanticJudgeClientTest(unittest.TestCase):
         with self.assertRaises(SemanticJudgeError) as context:
             client.judge(self.conversation)
 
+        self.assertNotIn("offline-semantic-credential", str(context.exception))
+        self.assertNotIn("Bearer", str(context.exception))
+
+    def test_url_and_os_failures_are_credential_safe_semantic_judge_errors(self):
+        def url_failure(request, timeout):
+            raise URLError("offline transport failure")
+
+        def os_failure(request, timeout):
+            raise OSError("offline socket failure")
+
+        for failing_transport in (url_failure, os_failure):
+            with self.subTest(transport=failing_transport.__name__):
+                client = self._client(failing_transport)
+                with self.assertRaises(SemanticJudgeError) as context:
+                    client.judge(self.conversation)
+
+                self.assertEqual(str(context.exception), "Semantic judge request failed")
+                self.assertNotIn("offline-semantic-credential", str(context.exception))
+                self.assertNotIn("Bearer", str(context.exception))
+
+    def test_invalid_utf8_response_bytes_are_a_credential_safe_semantic_judge_error(self):
+        client = self._client(OneShotTransport(b"\xff"))
+
+        with self.assertRaises(SemanticJudgeError) as context:
+            client.judge(self.conversation)
+
+        self.assertEqual(str(context.exception), "Semantic judge response was invalid")
         self.assertNotIn("offline-semantic-credential", str(context.exception))
         self.assertNotIn("Bearer", str(context.exception))
 
