@@ -15,6 +15,7 @@ from claimguard.knowledge import (
 )
 from claimguard.qa import generate_qa_report
 from claimguard.rules import load_rule_catalog
+from claimguard.semantic_judge import DashScopeSemanticJudgeClient, SemanticJudgeError
 
 
 class _LazyDashScopeEmbeddingClient:
@@ -34,6 +35,19 @@ class _LazyDashScopeEmbeddingClient:
         return self._client
 
 
+class _LazyDashScopeSemanticJudgeClient:
+    def __init__(self):
+        self._client = None
+
+    def judge(self, conversation):
+        return self._get_client().judge(conversation)
+
+    def _get_client(self):
+        if self._client is None:
+            self._client = DashScopeSemanticJudgeClient()
+        return self._client
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Run ClaimGuard AI QA on a conversation fixture."
@@ -42,10 +56,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("policy", nargs="?", help="Path to a policy Markdown file.")
     parser.add_argument("--output", help="Path for a generated knowledge index.")
     parser.add_argument("--index", help="Path to a knowledge index JSON file.")
+    parser.add_argument("--llm", action="store_true", help="Enable semantic LLM QA.")
     args = parser.parse_args(argv)
 
     try:
         if args.target == "index":
+            if args.llm:
+                parser.error("--llm is only supported with conversation QA")
             if args.policy is None:
                 parser.error("index requires a policy Markdown file")
             if args.output is None:
@@ -64,18 +81,32 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--output is only supported with index")
 
         conversation = load_conversation(args.target)
+        semantic_judge = _LazyDashScopeSemanticJudgeClient() if args.llm else None
         if args.index is None:
-            report = generate_qa_report(conversation, load_rule_catalog())
+            report = generate_qa_report(
+                conversation,
+                load_rule_catalog(),
+                semantic_judge=semantic_judge,
+            )
         else:
             report = generate_qa_report(
                 conversation,
                 load_rule_catalog(),
                 knowledge_index=load_knowledge_index(args.index),
                 embedding_client=_LazyDashScopeEmbeddingClient(),
+                semantic_judge=semantic_judge,
             )
         print(json.dumps(report.to_dict(), indent=2))
         return 0
-    except (KnowledgeError, EmbeddingError, OSError, json.JSONDecodeError) as error:
+    except SemanticJudgeError:
+        print("Semantic judge failed", file=sys.stderr)
+        return 2
+    except (
+        KnowledgeError,
+        EmbeddingError,
+        OSError,
+        json.JSONDecodeError,
+    ) as error:
         print(str(error), file=sys.stderr)
         return 2
     except (KeyError, TypeError):

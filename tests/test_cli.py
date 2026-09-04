@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from claimguard.cli import main
 from claimguard.embeddings import EmbeddingError
+from claimguard.semantic_judge import SemanticJudgeError, SemanticJudgment
 
 
 class StaticEmbeddingClient:
@@ -49,6 +50,25 @@ class StaticEmbeddingClient:
 class KeyRequiredEmbeddingClient:
     def __init__(self):
         raise EmbeddingError("DASHSCOPE_API_KEY is required for embeddings")
+
+
+class StaticJudge:
+    def judge(self, conversation):
+        return [
+            SemanticJudgment(
+                rule_id="SEM-005",
+                violated=True,
+                evidence="您的理赔明天一定到账。",
+                reasoning="客服作出了无依据的到账承诺。",
+                recommendation="说明处理时效需要以审核结果为准。",
+                confidence="high",
+            )
+        ]
+
+
+class KeyRequiredJudge:
+    def __init__(self):
+        raise SemanticJudgeError("offline-test-credential is required")
 
 
 class CLITest(unittest.TestCase):
@@ -191,6 +211,51 @@ class CLITest(unittest.TestCase):
 
         self.assertEqual(exit_code, 2)
         self.assertEqual(stderr.getvalue(), "Invalid conversation fixture\n")
+
+    def test_cli_creates_no_semantic_client_without_llm(self):
+        fixture_path = Path("examples/conversations/zh-semantic-qa.json")
+        stdout = io.StringIO()
+
+        with patch("claimguard.cli.DashScopeSemanticJudgeClient", KeyRequiredJudge):
+            with redirect_stdout(stdout):
+                exit_code = self.run_main([str(fixture_path)])
+
+        self.assertEqual(exit_code, 0)
+
+    def test_cli_adds_semantic_output_with_llm(self):
+        fixture_path = Path("examples/conversations/zh-semantic-qa.json")
+        stdout = io.StringIO()
+
+        with patch("claimguard.cli.DashScopeSemanticJudgeClient", StaticJudge):
+            with redirect_stdout(stdout):
+                exit_code = self.run_main([str(fixture_path), "--llm"])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["findings"][0]["rule_id"], "SEM-005")
+        self.assertEqual(payload["findings"][0]["judge"], "semantic_llm")
+
+    def test_cli_returns_two_for_semantic_judge_error(self):
+        fixture_path = Path("examples/conversations/zh-semantic-qa.json")
+        stderr = io.StringIO()
+
+        with patch("claimguard.cli.DashScopeSemanticJudgeClient", KeyRequiredJudge):
+            with redirect_stderr(stderr):
+                exit_code = self.run_main([str(fixture_path), "--llm"])
+
+        self.assertEqual(exit_code, 2)
+        self.assertNotIn("offline-test-credential", stderr.getvalue())
+
+    def test_cli_rejects_llm_for_index_command(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        policy_path = repository_root / "data/knowledge/petcare-plus-policy-zh.md"
+        stderr = io.StringIO()
+
+        with redirect_stderr(stderr):
+            exit_code = self.run_main(["index", str(policy_path), "--llm"])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("--llm is only supported with conversation QA", stderr.getvalue())
 
     def test_cli_outputs_qa_report_json_for_conversation_fixture(self):
         command = [
