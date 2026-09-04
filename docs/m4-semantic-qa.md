@@ -46,6 +46,13 @@ violation becomes a QA finding only if its evidence equals one complete agent
 message from the reviewed transcript. The report builder rejects fabricated,
 partial, customer-message, duplicate, malformed, or unsupported findings.
 
+The request schema uses provider-compatible primitive JSON Schema fields for
+formatting. ClaimGuard's local validator remains the source of truth for the
+full contract: all four rule IDs must appear exactly once, field values must
+have the expected types, and any violated evidence must match a complete agent
+message. This keeps the report contract strict even if a provider accepts only
+a smaller JSON Schema subset.
+
 When a network, provider, or response-contract failure occurs, the CLI exits
 with a concise error and emits no unvalidated semantic findings. Automated
 tests use injected local responses and never call Model Studio.

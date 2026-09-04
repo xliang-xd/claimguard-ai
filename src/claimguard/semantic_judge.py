@@ -101,7 +101,11 @@ SEM-003：客服是否表现出敷衍、不耐烦或轻视；
 SEM-004：客户投诉时，客服是否承认并安抚客户的担忧；
 SEM-005：客服是否对结果或时效作出无依据的确定性承诺。
 
-必须为每条规则返回一个判断。若判定违规，evidence 必须是客服原话中的完整、逐字引用，且不得编造。若未违规，evidence、reasoning 和 recommendation 必须为空字符串。"""
+必须为每条规则各返回一次判断。每个 findings 元素只能有 `rule_id`、`violated`、
+`evidence`、`reasoning`、`recommendation`、`confidence` 六个字段。`violated` 必须是
+布尔值，绝不能写成 `is_violated`；`confidence` 只能是 `high`、`medium` 或 `low`。
+若判定违规，evidence 必须是客服原话中的完整、逐字引用，且不得编造。若未违规，
+evidence、reasoning 和 recommendation 必须为空字符串。"""
 
 
 def _response_schema() -> dict[str, object]:
@@ -118,18 +122,6 @@ def _response_schema() -> dict[str, object]:
             "confidence": {"type": "string", "enum": list(ALLOWED_CONFIDENCE)},
         },
     }
-    required_rule_ids = [
-        {
-            "contains": {
-                "type": "object",
-                "required": ["rule_id"],
-                "properties": {"rule_id": {"const": rule_id}},
-            },
-            "minContains": 1,
-            "maxContains": 1,
-        }
-        for rule_id in ALLOWED_RULE_IDS
-    ]
     return {
         "type": "object",
         "additionalProperties": False,
@@ -137,10 +129,7 @@ def _response_schema() -> dict[str, object]:
         "properties": {
             "findings": {
                 "type": "array",
-                "minItems": len(ALLOWED_RULE_IDS),
-                "maxItems": len(ALLOWED_RULE_IDS),
                 "items": finding_schema,
-                "allOf": required_rule_ids,
             }
         },
     }

@@ -76,8 +76,6 @@ class SemanticJudgeClientTest(unittest.TestCase):
         schema = payload["response_format"]["json_schema"]["schema"]
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(schema["required"], ["findings"])
-        self.assertEqual(schema["properties"]["findings"]["minItems"], 4)
-        self.assertEqual(schema["properties"]["findings"]["maxItems"], 4)
         finding_schema = schema["properties"]["findings"]["items"]
         self.assertFalse(finding_schema["additionalProperties"])
         self.assertEqual(
@@ -105,6 +103,23 @@ class SemanticJudgeClientTest(unittest.TestCase):
 
         payload = json.loads(transport.requests[0][0].data.decode("utf-8"))
         self.assertEqual(payload["model"], "local-semantic-model")
+
+    def test_uses_provider_compatible_schema_keywords_and_literal_field_names(self):
+        transport = OneShotTransport(self._valid_response())
+        client = self._client(transport)
+
+        client.judge(self.conversation)
+
+        payload = json.loads(transport.requests[0][0].data.decode("utf-8"))
+        finding_array_schema = payload["response_format"]["json_schema"]["schema"][
+            "properties"
+        ]["findings"]
+        self.assertNotIn("allOf", finding_array_schema)
+        self.assertNotIn("contains", json.dumps(finding_array_schema))
+        self.assertNotIn("const", json.dumps(finding_array_schema))
+        instruction = payload["messages"][0]["content"]
+        self.assertIn("`violated`", instruction)
+        self.assertIn("`confidence`", instruction)
 
     def test_parses_a_complete_valid_response(self):
         client = self._client(OneShotTransport(self._valid_response()))
