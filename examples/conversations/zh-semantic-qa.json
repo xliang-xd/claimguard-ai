@@ -1,0 +1,23 @@
+{
+  "id": "zh-semantic-qa-001",
+  "scenario": "Customer complains about an unresolved pet insurance claim.",
+  "messages": [
+    {
+      "role": "customer",
+      "content": "我对理赔被拒非常不满，为什么不能报销？"
+    },
+    {
+      "role": "agent",
+      "content": "审核结果就是这样，您自己看条款。"
+    },
+    {
+      "role": "customer",
+      "content": "我已经等了很久，请给我明确的处理时间。"
+    },
+    {
+      "role": "agent",
+      "content": "您的理赔明天一定到账。"
+    }
+  ],
+  "expected_risks": ["SEM-004", "SEM-005"]
+}

@@ -41,6 +41,13 @@ class RuleRunnerTest(unittest.TestCase):
                     [match.rule_id for match in run_rules(conversation)], [rule_id]
                 )
 
+    def test_leaves_chinese_semantic_fixture_for_the_opt_in_judge(self):
+        conversation = load_conversation(
+            Path("examples/conversations/zh-semantic-qa.json")
+        )
+
+        self.assertEqual(run_rules(conversation), [])
+
     def test_detects_incomplete_chinese_clause_explanations(self):
         cases = (
             (
