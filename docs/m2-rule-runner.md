@@ -1,21 +1,20 @@
-# M2 Rule Runner
+# M2 规则运行器
 
-M2 replaces fixture-driven QA findings with the first deterministic local rule runner.
+M2 用首个确定性的本地规则运行器替代由 fixture 驱动的 QA 结论。
 
-## What Works
+## 已实现能力
 
-- Detect `SEM-002` when a claim amount dispute receives an evasive answer.
-- Detect `SEM-003` when an agent response uses impatient or final-result wording.
-- Detect `RAG-001` when a claim amount dispute lacks deductible or clause explanation.
-- Keep the CLI report JSON shape from M1.
+- 当赔付金额异议收到回避性回答时，检测 `SEM-002`。
+- 当客服回复包含不耐烦或“结果已定”类措辞时，检测 `SEM-003`。
+- 当赔付金额异议缺少免赔额或条款说明时，检测 `RAG-001`。
+- 保持 M1 的 CLI 报告 JSON 结构。
 
-## Intentional Limits
+## 有意保留的限制
 
-- The runner is rule-based and English-fixture oriented.
-- It covers the demo path before expanding to all 12 V1 rules.
-- RAG and LLM judges are still future milestones.
+- 运行器以规则为基础，且面向英文 fixture。
+- 它在扩展到全部 12 条 V1 规则前，先覆盖演示路径。
+- RAG 和 LLM Judge 仍是后续里程碑。
 
-## Version
+## 版本
 
-M2 is a minor feature milestone and maps to package version `0.2.0` and release tag `v0.2.0`.
-
+M2 是一个次版本功能里程碑，对应软件包版本 `0.2.0` 和发布标签 `v0.2.0`。

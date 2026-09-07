@@ -1,32 +1,31 @@
 # M1 QA CLI
 
-M1 introduces the first local QA loop for ClaimGuard AI.
+M1 为 ClaimGuard AI 引入首个本地 QA 闭环。
 
-## What Works
+## 已实现能力
 
-- Load a completed text conversation fixture.
-- Load the V1 rule catalog.
-- Generate a deterministic QA report.
-- Return JSON with conversation ID, scenario, score, findings, evidence, and recommendations.
+- 加载已完成文字对话 fixture。
+- 加载 V1 规则目录。
+- 生成确定性 QA 报告。
+- 返回包含对话 ID、场景、得分、结论、证据和建议的 JSON。
 
-## Intentional Limits
+## 有意保留的限制
 
-- No live LLM judge yet.
-- No vector search or real RAG yet.
-- Findings come from fixture `expected_risks` so the report contract can stabilize before model behavior is added.
+- 尚未接入实时 LLM Judge。
+- 尚未接入向量检索或真实 RAG。
+- 结论来自 fixture 的 `expected_risks`，以便在加入模型行为前先稳定报告契约。
 
-## Run
+## 运行
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
 ```
 
-## Report Fields
+## 报告字段
 
-- `conversation_id`: fixture identifier for the reviewed conversation.
-- `scenario`: human-readable case description.
-- `score`: deterministic quality score, currently `100 - 10 * finding_count`.
-- `findings`: ordered list of rule findings generated from the fixture's expected risks.
-- `evidence`: first agent response used as a deterministic evidence snippet in M1.
-- `recommendation`: placeholder coaching text that future LLM/RAG work will replace with clause-grounded suggestions.
-
+- `conversation_id`：被审查对话的 fixture 标识。
+- `scenario`：便于人阅读的案例说明。
+- `score`：确定性质量得分，当前为 `100 - 10 * finding_count`。
+- `findings`：由 fixture 预期风险生成的、有序规则结论列表。
+- `evidence`：M1 中用作确定性证据片段的第一条客服回复。
+- `recommendation`：占位辅导文本；未来 LLM/RAG 工作会以有条款依据的建议替换它。

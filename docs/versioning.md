@@ -1,31 +1,27 @@
-# Versioning Policy
+# 版本管理策略
 
-ClaimGuard AI uses Git release tags in the form `vX.Y.Z`.
+ClaimGuard AI 使用 `vX.Y.Z` 形式的 Git 发布标签。
 
-## Bump Rules
+## 升级规则
 
-- `v0.0.Z`: small fixes, documentation corrections, fixture tweaks, and narrow internal improvements.
-- `v0.Y.0`: larger feature milestones, new user-facing commands, new workflows, and meaningful capability upgrades.
-- `vX.0.0`: deliverable major releases only, such as a polished demo that can be shared as a complete portfolio milestone.
+- `v0.0.Z`：小型修复、文档更正、fixture 调整和范围较小的内部改进。
+- `v0.Y.0`：较大的功能里程碑、新的面向用户命令、新工作流和有意义的能力升级。
+- `vX.0.0`：只用于可交付的主版本，例如可作为完整作品集里程碑分享的完善演示。
 
-## Current Interpretation
+## 当前解释
 
-- M1 QA CLI is a feature milestone, so it fits the `v0.1.0` level.
-- M2 deterministic rule runner is a larger capability upgrade, so it should move the project to `v0.2.0` when merged.
-- README architecture and roadmap diagrams are documentation improvements, so they fit `v0.2.1`.
-- Agent orchestration documentation is a documentation improvement, so it fits `v0.2.2`.
-- M3 RAG grounding adds a policy index, embedding retrieval, grounded QA
-  evidence, and user-facing CLI commands, so it is the `v0.3.0` feature
-  milestone.
-- The ignored local `.env` configuration fallback is a narrow operator setup
-  improvement, so it is `v0.3.1`.
-- M4 Semantic QA adds an opt-in structured model workflow, four active
-  semantic rules, validated quote evidence, and a user-facing CLI flag, so it
-  is the `v0.4.0` feature milestone.
-- Further patch-only follow-ups should use `v0.4.1`, `v0.4.2`, and so on.
+- M1 QA CLI 是功能里程碑，因此采用 `v0.1.0`。
+- M2 确定性规则运行器是较大的能力升级，因此合并时升级为 `v0.2.0`。
+- README 架构图和路线图属于文档改进，因此采用 `v0.2.1`。
+- Agent 编排文档属于文档改进，因此采用 `v0.2.2`。
+- M3 RAG 依据能力新增保单索引、Embedding 检索、有依据的 QA 证据和面向用户的 CLI 命令，因此是 `v0.3.0` 功能里程碑。
+- 被忽略的本地 `.env` 配置回退是范围较小的操作者配置改进，因此为 `v0.3.1`。
+- M4 语义质检新增可选的结构化模型工作流、四条生效的语义规则、经过验证的引文证据和一个面向用户的 CLI 标志，因此是 `v0.4.0` 功能里程碑。
+- `v0.4.1` 是说明性文档和技术图的中文本地化补丁，不改变已交付功能的范围。
+- 后续仅包含补丁的跟进应使用 `v0.4.1`、`v0.4.2` 等版本。
 
-## Practical Rules
+## 实务规则
 
-- Python package metadata uses PEP 440 versions without the leading `v`, such as `0.3.0`.
-- Git tags and GitHub release names use the leading `v`, such as `v0.3.0`.
-- Do not create a `v1.0.0` release until ClaimGuard has a usable end-to-end demo with documented setup, example data, tests, and a clear user workflow.
+- Python 软件包元数据采用不带前导 `v` 的 PEP 440 版本，例如 `0.3.0`。
+- Git 标签和 GitHub 发布名称采用带前导 `v` 的版本，例如 `v0.3.0`。
+- 在 ClaimGuard 具备可用的端到端演示、文档化的设置步骤、示例数据、测试和清晰用户工作流之前，不创建 `v1.0.0` 发布。

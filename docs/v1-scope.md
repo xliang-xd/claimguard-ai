@@ -1,33 +1,32 @@
-# ClaimGuard AI V1 Scope
+# ClaimGuard AI V1 范围
 
-ClaimGuard AI focuses on text-based insurance customer service. It intentionally excludes phone calls, ASR, speaker diarization, OCR, video, outbound calls, and audio quality inspection.
+ClaimGuard AI 聚焦保险文字客服，明确不包含电话、ASR、说话人分离、OCR、视频、智能外呼和音频质检。
 
-## Product Surface
+## 产品能力
 
-V1 has two core workflows:
+V1 包含两个核心工作流：
 
-1. Customer Service Copilot
-   - Reads an in-progress customer message.
-   - Detects customer intent.
-   - Retrieves relevant policy knowledge.
-   - Suggests a grounded reply.
-   - Highlights risky wording the agent should avoid.
+1. 客服 Copilot
+   - 读取正在处理的客户消息。
+   - 识别客户意图。
+   - 检索相关保单知识。
+   - 建议有依据的回复。
+   - 标出客服应避免的高风险措辞。
 
-2. Quality Assurance
-   - Reads a completed text conversation.
-   - Scores service quality.
-   - Runs semantic, process, and knowledge-grounded checks.
-   - Shows evidence, violated rule IDs, cited clauses, and improved replies.
+2. 智能质检
+   - 读取已完成文字对话。
+   - 为服务质量评分。
+   - 运行语义、流程和知识依据检查。
+   - 展示证据、违规规则 ID、引用条款和改进回复。
 
-## Technical Shape
+## 技术形态
 
-The first implementation should stay workflow-oriented:
+首个实现应以工作流为中心：
 
 ```text
 Router
-  -> Knowledge workflow: intent, retrieval, citation grounding
-  -> QA workflow: rule selection, judgment, evidence, scoring
+  -> 知识工作流：意图、检索、引用依据
+  -> QA 工作流：规则选择、判定、证据、评分
 ```
 
-V1 does not need many agents. The business tasks are structured enough that a small workflow graph is clearer and easier to test than an oversized multi-agent setup.
-
+V1 不需要很多 Agent。业务任务足够结构化，小型工作流图比过大的多 Agent 设计更清晰，也更易测试。
