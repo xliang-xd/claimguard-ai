@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 720" width="1440" height="720" role="img" aria-labelledby="title desc">
-  <title id="title">ClaimGuard AI v0.4 Agent Orchestration</title>
-  <desc id="desc">The implemented QA workflow handles completed conversations through deterministic rules, optional RAG, optional Qwen semantic judging, validation, and a report. Copilot and advanced judgment nodes are deferred.</desc>
+  <title id="title">ClaimGuard AI v0.4 Agent 编排</title>
+  <desc id="desc">已实现的 QA 工作流通过确定性规则、可选 RAG、可选 Qwen 语义判断、验证和报告处理已完成对话。Copilot 和高级判断节点仍处于延后阶段。</desc>
   <style>
-    text { font-family: Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    text { font-family: 'Hiragino Sans GB', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; }
     .title { fill: #111827; font-size: 27px; font-weight: 700; }
     .subtitle { fill: #6b7280; font-size: 14px; }
     .lane { fill: #6b7280; font-size: 12px; font-weight: 700; letter-spacing: 1.2px; }
@@ -19,32 +19,32 @@
     <marker id="orange" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 Z" fill="#ea580c"/></marker>
   </defs>
   <rect width="1440" height="720" fill="#ffffff"/>
-  <text x="65" y="56" class="title">ClaimGuard AI Agent Orchestration</text>
-  <text x="65" y="82" class="subtitle">One implemented QA workflow, with a separate future Copilot workflow. Shared capabilities remain nodes, not extra product agents.</text>
+  <text x="65" y="56" class="title">ClaimGuard AI Agent 编排</text>
+  <text x="65" y="82" class="subtitle">一个已实现的 QA 工作流与一个独立的未来 Copilot 工作流；共享能力保持为节点，而非额外的产品 Agent。</text>
 
   <g data-graph-role="container">
     <rect x="50" y="115" width="1340" height="285" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="7 5"/>
-    <text x="75" y="144" class="lane">IMPLEMENTED QA AGENT - V0.4.0</text>
+    <text x="75" y="144" class="lane">已实现的 QA AGENT - V0.4.0</text>
   </g>
   <g data-graph-role="node">
     <rect x="85" y="230" width="165" height="84" rx="8" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6"/>
-    <text x="167" y="260" text-anchor="middle" class="node-title">Completed</text>
-    <text x="167" y="280" text-anchor="middle" class="node-title">Conversation</text>
-    <text x="167" y="301" text-anchor="middle" class="node-sub">CLI fixture input</text>
+    <text x="167" y="260" text-anchor="middle" class="node-title">已完成</text>
+    <text x="167" y="280" text-anchor="middle" class="node-title">对话</text>
+    <text x="167" y="301" text-anchor="middle" class="node-sub">CLI fixture 输入</text>
     <rect x="315" y="230" width="185" height="84" rx="8" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6"/>
-    <text x="407" y="260" text-anchor="middle" class="node-title">Deterministic</text>
-    <text x="407" y="280" text-anchor="middle" class="node-title">Rule Runner</text>
-    <text x="407" y="301" text-anchor="middle" class="node-sub">always active</text>
+    <text x="407" y="260" text-anchor="middle" class="node-title">确定性</text>
+    <text x="407" y="280" text-anchor="middle" class="node-title">规则运行器</text>
+    <text x="407" y="301" text-anchor="middle" class="node-sub">始终生效</text>
     <rect x="565" y="230" width="185" height="84" rx="8" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.6"/>
-    <text x="657" y="260" text-anchor="middle" class="node-title">RAG Retriever</text>
-    <text x="657" y="281" text-anchor="middle" class="node-sub">optional --index</text>
+    <text x="657" y="260" text-anchor="middle" class="node-title">RAG 检索器</text>
+    <text x="657" y="281" text-anchor="middle" class="node-sub">可选 --index</text>
     <rect x="815" y="230" width="185" height="84" rx="8" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1.6"/>
-    <text x="907" y="260" text-anchor="middle" class="node-title">Semantic Judge</text>
-    <text x="907" y="281" text-anchor="middle" class="node-sub">Qwen; --llm only</text>
+    <text x="907" y="260" text-anchor="middle" class="node-title">语义裁判</text>
+    <text x="907" y="281" text-anchor="middle" class="node-sub">Qwen；仅 --llm</text>
     <rect x="1065" y="230" width="200" height="84" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="1.6"/>
-    <text x="1165" y="256" text-anchor="middle" class="node-title">Evidence Validator</text>
-    <text x="1165" y="278" text-anchor="middle" class="node-title">+ Deduplicator</text>
-    <text x="1165" y="300" text-anchor="middle" class="node-sub">complete agent quote</text>
+    <text x="1165" y="256" text-anchor="middle" class="node-title">证据验证器</text>
+    <text x="1165" y="278" text-anchor="middle" class="node-title">+ 去重器</text>
+    <text x="1165" y="300" text-anchor="middle" class="node-sub">完整客服引文</text>
     <rect x="1300" y="230" width="60" height="84" rx="8" fill="#ffffff" stroke="#93c5fd" stroke-width="1.6"/>
     <text x="1330" y="260" text-anchor="middle" class="node-title">QA</text>
     <text x="1330" y="281" text-anchor="middle" class="node-title">JSON</text>
@@ -54,30 +54,30 @@
   <path data-graph-role="edge" d="M750 272 H815" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#blue)"/>
   <path data-graph-role="edge" d="M1000 272 H1065" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#blue)"/>
   <path data-graph-role="edge" d="M1265 272 H1300" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#blue)"/>
-  <text x="907" y="211" text-anchor="middle" class="edge-label">one call per conversation with --llm</text>
+  <text x="907" y="211" text-anchor="middle" class="edge-label">使用 --llm 时，每段对话调用一次</text>
   <rect x="1010" y="340" width="305" height="28" rx="6" fill="#ffffff" stroke="#fdba74"/>
-  <text x="1162" y="359" text-anchor="middle" class="current">CURRENT: Semantic QA is opt-in</text>
+  <text x="1162" y="359" text-anchor="middle" class="current">当前：语义质检为可选能力</text>
 
   <g data-graph-role="container">
     <rect x="50" y="455" width="1340" height="170" rx="10" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="7 5"/>
-    <text x="75" y="484" class="lane">DEFERRED PRODUCT AND CAPABILITIES</text>
+    <text x="75" y="484" class="lane">延后的产品与能力</text>
   </g>
   <g data-graph-role="node">
     <rect x="115" y="525" width="190" height="60" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6 4"/>
     <text x="210" y="552" text-anchor="middle" class="node-title">Copilot Agent</text>
-    <text x="210" y="571" text-anchor="middle" class="node-sub">active chat assistance</text>
+    <text x="210" y="571" text-anchor="middle" class="node-sub">实时聊天辅助</text>
     <rect x="390" y="525" width="180" height="60" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6 4"/>
     <text x="480" y="552" text-anchor="middle" class="node-title">Reranker</text>
-    <text x="480" y="571" text-anchor="middle" class="node-sub">candidate ordering</text>
+    <text x="480" y="571" text-anchor="middle" class="node-sub">候选排序</text>
     <rect x="655" y="525" width="180" height="60" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6 4"/>
     <text x="745" y="552" text-anchor="middle" class="node-title">Citation Judge</text>
-    <text x="745" y="571" text-anchor="middle" class="node-sub">clause accuracy</text>
+    <text x="745" y="571" text-anchor="middle" class="node-sub">条款准确性</text>
     <rect x="920" y="525" width="180" height="60" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6 4"/>
-    <text x="1010" y="552" text-anchor="middle" class="node-title">Persistence</text>
-    <text x="1010" y="571" text-anchor="middle" class="node-sub">case records</text>
+    <text x="1010" y="552" text-anchor="middle" class="node-title">持久化</text>
+    <text x="1010" y="571" text-anchor="middle" class="node-sub">案例记录</text>
     <rect x="1185" y="525" width="150" height="60" rx="8" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6 4"/>
     <text x="1260" y="552" text-anchor="middle" class="node-title">Web / API</text>
-    <text x="1260" y="571" text-anchor="middle" class="node-sub">service entry</text>
+    <text x="1260" y="571" text-anchor="middle" class="node-sub">服务入口</text>
   </g>
   <path data-graph-role="edge" d="M305 555 H390" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#orange)"/>
   <path data-graph-role="edge" d="M570 555 H655" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#orange)"/>
@@ -85,12 +85,12 @@
   <path data-graph-role="edge" d="M1100 555 H1185" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#orange)"/>
   <g data-graph-role="legend" transform="translate(70,670)">
     <line x1="0" y1="8" x2="40" y2="8" stroke="#2563eb" stroke-width="2.3" marker-end="url(#blue)"/>
-    <text x="52" y="12" class="small">implemented QA path</text>
+    <text x="52" y="12" class="small">已实现 QA 路径</text>
     <line x1="245" y1="8" x2="285" y2="8" stroke="#16a34a" stroke-width="2.3" marker-end="url(#green)"/>
-    <text x="297" y="12" class="small">optional local retrieval</text>
+    <text x="297" y="12" class="small">可选本地检索</text>
     <line x1="535" y1="8" x2="575" y2="8" stroke="#9333ea" stroke-width="2.3" marker-end="url(#purple)"/>
-    <text x="587" y="12" class="small">model-backed semantic judgment</text>
+    <text x="587" y="12" class="small">模型驱动的语义判断</text>
     <line x1="925" y1="8" x2="965" y2="8" stroke="#ea580c" stroke-width="2.3" stroke-dasharray="7 5" marker-end="url(#orange)"/>
-    <text x="977" y="12" class="small">deferred extension</text>
+    <text x="977" y="12" class="small">延后扩展</text>
   </g>
 </svg>

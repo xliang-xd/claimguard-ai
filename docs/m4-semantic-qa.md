@@ -1,65 +1,40 @@
-# M4: v0.4 Semantic QA
+# M4：v0.4 语义质检
 
-`v0.4.0` adds an opt-in semantic quality-inspection path for completed Chinese
-text customer-service conversations. The existing deterministic CLI and
-optional RAG grounding remain available without a semantic model call.
+`v0.4.0` 为已完成的中文文字客服对话新增可选语义质检路径。既有确定性 CLI 和可选 RAG 依据能力无需语义模型调用即可继续使用。
 
-## Active Semantic Rules
+## 生效的语义规则
 
-The Qwen judge evaluates these four rules in one structured request:
+Qwen 裁判会在一次结构化请求中评估以下四条规则：
 
-| Rule | What it checks |
+| 规则 | 检查内容 |
 | --- | --- |
-| `SEM-002` | Whether the agent addresses the customer's core question |
-| `SEM-003` | Whether the agent is dismissive or impatient |
-| `SEM-004` | Whether a complaint is acknowledged and soothed |
-| `SEM-005` | Whether the agent makes an unsupported definite commitment |
+| `SEM-002` | 客服是否回应客户核心问题 |
+| `SEM-003` | 客服是否表现出敷衍或不耐烦 |
+| `SEM-004` | 投诉是否得到承认和安抚 |
+| `SEM-005` | 客服是否作出无依据的确定性承诺 |
 
-The default semantic model is Alibaba Cloud Model Studio Qwen
-`qwen3.7-plus`. The request uses `temperature: 0`, disables thinking, and
-requires strict JSON Schema output. `CLAIMGUARD_SEMANTIC_MODEL` can override
-the model in local ignored configuration when an operator has a compatible
-deployment.
+默认语义模型为阿里云 Model Studio Qwen `qwen3.7-plus`。请求采用 `temperature: 0`、关闭思考模式，并要求严格 JSON Schema 输出。当操作者拥有兼容部署时，可在被忽略的本地配置中通过 `CLAIMGUARD_SEMANTIC_MODEL` 覆盖模型。
 
-## Operator Command
+## 操作者命令
 
-Copy `.env.example` to the Git-ignored `.env` file and configure a local Model
-Studio key. Then run:
+将 `.env.example` 复制到被 Git 忽略的 `.env`，并配置本地 Model Studio Key。然后运行：
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-semantic-qa.json --llm
 ```
 
-`--llm` is an explicit paid network call. It reads the ignored local `.env`
-file through the project configuration fallback; explicit process environment
-variables take priority. Do not place a key in the command line, fixture,
-documentation example, or Git history.
+`--llm` 是一次明确会产生费用的网络调用。它通过项目配置回退读取被忽略的本地 `.env`；显式进程环境变量优先。不要把 Key 放入命令行、fixture、文档示例或 Git 历史。
 
-Without `--llm`, the CLI constructs no semantic client and makes no semantic
-network request. The flag is valid only for conversation QA, not for the
-`index` command.
+未传入 `--llm` 时，CLI 不会构造语义客户端，也不会产生语义网络请求。该标志只适用于对话 QA，不适用于 `index` 命令。
 
-## Evidence and Failure Contract
+## 证据与失败契约
 
-The semantic judge must return one decision for each active semantic rule. A
-violation becomes a QA finding only if its evidence equals one complete agent
-message from the reviewed transcript. The report builder rejects fabricated,
-partial, customer-message, duplicate, malformed, or unsupported findings.
+语义裁判必须为每条生效语义规则返回一个决定。只有当违规证据精确等于被审查对话中的一整条客服消息时，违规才会成为 QA 结论。报告构建器拒绝编造、片段、客户消息、重复、格式错误或不受支持的结论。
 
-The request schema uses provider-compatible primitive JSON Schema fields for
-formatting. ClaimGuard's local validator remains the source of truth for the
-full contract: all four rule IDs must appear exactly once, field values must
-have the expected types, and any violated evidence must match a complete agent
-message. This keeps the report contract strict even if a provider accepts only
-a smaller JSON Schema subset.
+请求 Schema 使用服务商兼容的基础 JSON Schema 字段来约束格式。ClaimGuard 的本地验证器仍是完整契约的唯一依据：四个规则 ID 都必须恰好出现一次，字段值必须具备预期类型，任何违规证据都必须匹配一整条客服消息。即使服务商只接受较小的 JSON Schema 子集，报告契约仍保持严格。
 
-When a network, provider, or response-contract failure occurs, the CLI exits
-with a concise error and emits no unvalidated semantic findings. Automated
-tests use injected local responses and never call Model Studio.
+发生网络、服务商或响应契约失败时，CLI 会以简洁错误退出，不会输出未经验证的语义结论。自动化测试使用注入的本地响应，绝不调用 Model Studio。
 
-## Deliberate Limits
+## 有意保留的限制
 
-This milestone does not add a Citation Judge, reranking, Copilot reply
-generation, persistence, or web/API endpoints. RAG retrieval evidence remains
-useful context for supported policy rules, but it is not citation-accuracy
-judgment. All committed policy and conversation examples are synthetic.
+本里程碑不新增 Citation Judge、Reranking、Copilot 回复生成、持久化或 Web/API 端点。RAG 检索证据仍是受支持保单规则的有用上下文，但不是引用准确性判断。所有已提交的保单和对话示例均为合成数据。

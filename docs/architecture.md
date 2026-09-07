@@ -1,71 +1,48 @@
-# Architecture
+# 架构
 
-ClaimGuard AI uses three complementary judgment paths depending on the risk
-type. In `v0.4.0`, deterministic rules always run; RAG grounding and semantic
-judgment are opt-in additions to the same stable QA report.
+ClaimGuard AI 会依风险类型采用三条互补的判断路径。在 `v0.4.0` 中，确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。
 
-## Semantic QA (Current)
+## 语义质检（当前）
 
-For a completed conversation, `--llm` invokes one Alibaba Cloud Model Studio
-Qwen `qwen3.7-plus` request with strict JSON Schema, `temperature: 0`, and
-thinking disabled. It evaluates `SEM-002` through `SEM-005`: relevance,
-impatient tone, complaint acknowledgement, and unsupported commitments.
+对于一段已完成对话，`--llm` 会调用一次阿里云 Model Studio 的 Qwen `qwen3.7-plus`，使用严格 JSON Schema、`temperature: 0` 并关闭思考模式。它评估 `SEM-002` 至 `SEM-005`：回答相关性、服务态度不耐烦、投诉承认与安抚，以及无依据的确定性承诺。
 
-The report builder accepts a semantic violation only when the returned evidence
-is an exact, complete agent message from the transcript. It deduplicates any
-rule already emitted by deterministic matching. Provider, transport, and
-contract errors stop the command rather than adding unvalidated findings.
+只有当返回证据精确等于对话中的一整条客服消息时，报告构建器才会接受一项语义违规。对于已经由确定性匹配产生的规则，它会去重。服务商、传输或契约错误会终止命令，而不会加入未经验证的结论。
 
-Without `--llm`, the semantic client is never created and the normal CLI makes
-no semantic network request.
+未传入 `--llm` 时，语义客户端不会创建，普通 CLI 也不会产生语义网络请求。
 
-## Process QA (Future)
+## 流程质检（后续）
 
-The target process rules will combine deterministic checks with LLM
-normalization. This future work aims to accept flexible wording while still
-enforcing required service steps, such as identity disclosure and conversation
-closing.
+目标流程规则将结合确定性检查和 LLM 规范化处理。未来工作旨在接受更灵活的表达，同时继续执行身份披露、会话结束等必要服务步骤。
 
-## Knowledge-grounded QA (Current)
+## 知识依据质检（当前）
 
-Knowledge-grounded rules parse supported Chinese policy headings, use
-`qwen3.7-text-embedding` to build and query a local JSON index, and attach the
-top retrieved clause to a finding. The implemented rules are `RAG-001` through
-`RAG-005`; they cover deductible, waiting-period, coverage, accident, and
-denial-citation cases. The report exposes clause ID, title, text, source path,
-and retrieval score as additive evidence.
+知识依据规则会解析受支持的中文保单标题，使用 `qwen3.7-text-embedding` 构建并查询本地 JSON 索引，并将检索排名第一的条款附加到结论。已实现的规则是 `RAG-001` 至 `RAG-005`，覆盖免赔额、等待期、保障范围、意外定义和拒赔引用案例。报告将条款 ID、标题、文本、来源路径和检索得分作为补充证据输出。
 
-Index construction and query-time retrieval are deliberately separate:
+索引构建和查询期检索被有意分开：
 
 ```text
-Explicit index command
-  Policy Markdown -> Parser -> Qwen embedding -> ignored local JSON index
+显式索引命令
+  保单 Markdown -> 解析器 -> Qwen Embedding -> 被忽略的本地 JSON 索引
 
-QA command with --index
-  Matched RAG rule -> query embedding -> existing local index -> clause evidence
+带 --index 的 QA 命令
+  命中的 RAG 规则 -> 查询 Embedding -> 既有本地索引 -> 条款证据
 ```
 
-The local index is an ignored operator artifact under `.claimguard/`. The
-embedding client is created only for index creation and grounded retrieval; the
-legacy QA CLI remains fully offline and does not require a key.
+本地索引是位于 `.claimguard/` 下、供操作者使用且被忽略的产物。Embedding 客户端只在创建索引和有依据检索时创建；旧版 QA CLI 仍然完全离线，也不需要 Key。
 
-## Deferred Work
+## 延后工作
 
-`v0.4.0` does not implement Citation Judge, reranking, Copilot reply
-generation, persistence, or web/API endpoints. Retrieval evidence identifies a
-selected clause; it does not make a citation-accuracy judgment.
+`v0.4.0` 尚未实现 Citation Judge、Reranking、Copilot 回复生成、持久化或 Web/API 端点。检索证据只用于定位选中的条款，不构成引用准确性判断。
 
-## Planned Directories
+## 规划目录
 
 ```text
-data/knowledge/              policy text and clause fixtures
-examples/conversations/      sample conversations for demos and tests
-src/claimguard/              application package
-tests/                       automated checks
+data/knowledge/              保单文本与条款 fixture
+examples/conversations/      用于演示和测试的示例对话
+src/claimguard/              应用软件包
+tests/                       自动化检查
 ```
 
-See `docs/m3-rag-grounding.md` for v0.3 operating instructions and
-`docs/m4-semantic-qa.md` for the v0.4 semantic operating contract.
+v0.3 操作说明见 `docs/m3-rag-grounding.md`，v0.4 语义操作契约见 `docs/m4-semantic-qa.md`。
 
-See `docs/agent-orchestration.md` for the maintained agent topology, domestic
-model defaults, and update policy.
+维护中的 Agent 拓扑、国产模型默认配置和更新策略见 `docs/agent-orchestration.md`。

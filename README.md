@@ -1,186 +1,157 @@
 # ClaimGuard AI
 
-Insurance text customer service Copilot and AI quality assurance system.
+面向保险文字客服的 Copilot 与 AI 智能质检系统。
 
-ClaimGuard AI is a focused GitHub demo project for text-based insurance service. It does not handle calls, ASR, speaker diarization, OCR, video, or outbound dialing. V1 concentrates on two inputs:
+ClaimGuard AI 是一个聚焦于保险文字服务的 GitHub 演示项目。不处理电话、ASR、说话人分离、OCR、视频或智能外呼。V1 只关注两类输入：
 
-1. A customer message currently being handled by an online service agent.
-2. A completed text conversation that needs quality inspection.
+1. 正由在线客服处理的客户消息。
+2. 需要接受质检的已完成文字对话。
 
-## Architecture
+## 架构
 
-![ClaimGuard AI architecture](docs/assets/architecture.svg)
+![ClaimGuard AI 架构图](docs/assets/architecture.svg)
 
-The current `v0.4.0` core combines deterministic QA, optional RAG grounding,
-and an opt-in semantic judge for completed Chinese conversations. The semantic
-judge runs once only when an operator supplies `--llm`; the default CLI remains
-offline. Citation judgment, reranking, Copilot generation, and web/API
-endpoints remain future milestones. The QA report contract remains stable.
+当前 `v0.4.1` 核心由确定性 QA、可选的 RAG 依据检索，以及面向已完成中文对话的可选语义质检组成。只有当操作者显式传入 `--llm` 时，语义裁判才会执行一次；默认 CLI 保持离线。Citation Judge、Reranking、Copilot 生成与 Web/API 端点仍属于后续里程碑。QA 报告契约保持稳定。
 
-## V1 Product
+## V1 产品
 
-### Customer Service Copilot
+### 客服 Copilot
 
-The Copilot workflow helps an agent answer a customer during an active chat.
+Copilot 工作流在实时聊天中帮助客服回复客户。
 
-- Detect customer intent, such as claim amount dispute, denial explanation, policy clause lookup, or complaint.
-- Retrieve relevant insurance knowledge.
-- Draft a clear, compliant, clause-grounded reply.
-- Warn the agent about risky phrases, unsupported commitments, and impatient wording.
+- 识别客户意图，例如赔付金额异议、拒赔说明、保单条款查询或投诉。
+- 检索相关保险知识。
+- 起草清晰、合规且有条款依据的回复。
+- 提醒客服避免高风险措辞、无依据承诺和不耐烦表达。
 
-### Quality Assurance
+### 智能质检
 
-The QA workflow reviews completed conversations.
+QA 工作流审查已完成对话。
 
-- Produce a quality score.
-- Run semantic, process, and knowledge-grounded rules.
-- Show violated rule IDs, risk levels, evidence, and reasoning.
-- Suggest a better reply grounded in the correct policy clause.
+- 生成质检得分。
+- 运行语义、流程和知识依据规则。
+- 展示违规规则 ID、风险等级、证据和判定理由。
+- 提供有正确保单条款依据的改进回复建议。
 
-## V1 Target Rule Matrix
+## V1 目标规则矩阵
 
-`SEM-002` through `SEM-005` are active when the operator explicitly supplies
-`--llm`. The deterministic runner and RAG grounding remain available without a
-semantic model call. `SEM-001`, process normalization, and citation judgment
-remain deferred.
+当操作者显式传入 `--llm` 时，`SEM-002` 至 `SEM-005` 生效。确定性规则运行器和 RAG 依据检索无需语义模型调用即可使用。`SEM-001`、流程规范化和引用判断仍处于延后状态。
 
-| Rule ID | Rule | Category | Risk | Detection |
+| 规则 ID | 规则 | 类别 | 风险 | 检测方式 |
 | --- | --- | --- | --- | --- |
-| SEM-001 | Counter-questioning the customer | Semantic | Critical | LLM judge (future) |
-| SEM-002 | Answer does not address customer intent | Semantic | Critical | Qwen semantic judge (`--llm`) |
-| SEM-003 | Impatient service tone | Semantic | Critical | Qwen semantic judge (`--llm`) |
-| SEM-004 | Complaint not acknowledged or soothed | Semantic | Critical | Qwen semantic judge (`--llm`) |
-| SEM-005 | Unapproved commitment | Semantic | Critical | Qwen semantic judge (`--llm`) |
-| PROC-001 | Incomplete identity disclosure | Process | High | Rule + LLM (future) |
-| PROC-002 | Missing closing statement | Process | Low | Rule + LLM (future) |
-| RAG-001 | Claim amount dispute: deductible | Knowledge-grounded | Medium | Deterministic RAG evidence |
-| RAG-002 | Pre-policy or waiting-period treatment denial | Knowledge-grounded | Medium | Deterministic RAG evidence |
-| RAG-003 | Disease outside policy coverage | Knowledge-grounded | Medium | Deterministic RAG evidence |
-| RAG-004 | Accident definition explanation | Knowledge-grounded | Medium | Deterministic RAG evidence |
-| RAG-005 | Dynamic clause citation for pet insurance denial | Knowledge-grounded | High | Intent + RAG evidence + Citation judge (future) |
+| SEM-001 | 反诘客户 | 语义 | 极高 | LLM Judge（后续） |
+| SEM-002 | 回答未覆盖客户意图 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
+| SEM-003 | 服务态度不耐烦 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
+| SEM-004 | 投诉未被承认或安抚 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
+| SEM-005 | 未获批准的承诺 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
+| PROC-001 | 身份披露不完整 | 流程 | 高 | 规则 + LLM（后续） |
+| PROC-002 | 缺少结束语 | 流程 | 低 | 规则 + LLM（后续） |
+| RAG-001 | 赔付金额异议：免赔额 | 知识依据 | 中 | 确定性 RAG 证据 |
+| RAG-002 | 投保前或等待期内就诊拒赔 | 知识依据 | 中 | 确定性 RAG 证据 |
+| RAG-003 | 疾病不在保单保障范围内 | 知识依据 | 中 | 确定性 RAG 证据 |
+| RAG-004 | 意外定义说明 | 知识依据 | 中 | 确定性 RAG 证据 |
+| RAG-005 | 宠物险拒赔的动态条款引用 | 知识依据 | 高 | 意图 + RAG 证据 + Citation Judge（后续） |
 
-`RAG-005` is the V1 target hero case because it is intended to demonstrate
-intent routing, retrieval, citation accuracy, and grounded answer quality in
-one scenario. In v0.4 it attaches retrieved clause evidence only; citation
-accuracy remains a future Citation Judge capability.
+`RAG-005` 是 V1 的重点演示案例，因为它计划在一个场景中展现意图路由、检索、引用准确性和有依据的回答质量。v0.4 仅附加检索到的条款证据；引用准确性仍需要未来的 Citation Judge。
 
-## Technical Direction
+## 技术方向
 
-V1 should stay small and explicit:
+V1 应保持小而明确：
 
 ```text
 Router
-  -> Knowledge workflow: RAG, citation grounding, answer drafting
-  -> QA workflow: rule selection, judgment, evidence, scoring
+  -> 知识工作流：RAG、引用依据、回复起草
+  -> QA 工作流：规则选择、判定、证据、评分
 ```
 
-The project should show product judgment, not agent sprawl. A compact workflow is easier to explain, test, and extend than a large multi-agent graph.
+项目应体现产品判断，而不是堆叠 Agent。相比庞大的多 Agent 图，一个紧凑的工作流更容易说明、测试和扩展。
 
-## Current Milestone
+## 当前里程碑
 
-Current package version: `0.4.0`.
+当前软件包版本：`0.4.1`。
 
-M2 adds the first deterministic rule runner. QA findings now come from conversation text instead of the fixture's `expected_risks` field. The fixture field remains as test oracle data while LLM behavior is still under development.
+M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，而非 fixture 中的 `expected_risks` 字段。在 LLM 行为仍处于开发阶段时，该字段继续作为测试预期数据。
 
-`v0.2.1` is a documentation patch that adds README architecture and roadmap diagrams.
+`v0.2.1` 是文档补丁，新增 README 架构图和路线图。
 
-`v0.2.2` is a documentation patch that records the maintained agent
-orchestration and domestic model defaults in `docs/agent-orchestration.md`.
+`v0.2.2` 是文档补丁，记录维护中的 Agent 编排和国产模型默认配置，详见 `docs/agent-orchestration.md`。
 
-`v0.3.0` adds deterministic Chinese policy grounding: a policy parser and
-validated local index, Qwen `qwen3.7-text-embedding` retrieval, five supported
-RAG rules, retrieval evidence on QA findings, and backward-compatible CLI
-commands for index creation and grounded QA. It does not add LLM judges,
-reranking, or citation-accuracy judgment.
+`v0.3.0` 新增确定性的中文保单依据能力：保单解析器和已验证的本地索引、Qwen `qwen3.7-text-embedding` 检索、五条受支持的 RAG 规则、QA 结论中的检索证据，以及兼容旧用法的索引创建与依据质检 CLI 命令。它不包含 LLM Judge、Reranking 或引用准确性判断。
 
-`v0.3.1` adds an ignored project-local `.env` fallback for Model Studio
-configuration. Explicit process environment variables still take priority.
+`v0.3.1` 新增被 Git 忽略的项目本地 `.env` 配置回退。显式设置的进程环境变量仍具有更高优先级。
 
-`v0.4.0` adds opt-in Semantic QA for `SEM-002` through `SEM-005`. With
-`--llm`, one Qwen `qwen3.7-plus` structured-output request evaluates a
-completed conversation. A semantic finding is emitted only when its evidence
-is an exact, complete customer-service message in that conversation; provider
-or contract failures return an error instead of unvalidated findings.
+`v0.4.0` 为 `SEM-002` 至 `SEM-005` 新增可选的语义质检。使用 `--llm` 时，一次 Qwen `qwen3.7-plus` 结构化输出请求会评估一段已完成对话。只有当语义结论的证据精确等于该对话中的一整条客服消息时，系统才会输出该结论；服务商或契约错误会返回失败，而不是产生未经验证的结论。
 
-## Repository Layout
+## 仓库结构
 
 ```text
-docs/                       product scope and architecture notes
-data/knowledge/             synthetic policy fixtures
-examples/conversations/     demo conversation fixtures
-src/claimguard/             Python package
-tests/                      automated tests
+docs/                       产品范围与架构说明
+data/knowledge/             合成保单 fixture
+examples/conversations/     演示对话 fixture
+src/claimguard/             Python 软件包
+tests/                      自动化测试
 ```
 
-## Versioning
+## 版本管理
 
-Release tags use `vX.Y.Z`.
+发布标签采用 `vX.Y.Z` 格式。
 
-- Small fixes use `v0.0.Z` style patch bumps.
-- Larger feature milestones use `v0.Y.0` minor bumps.
-- Major `vX.0.0` releases are reserved for genuinely deliverable demo milestones.
+- 小型改动使用 `v0.0.Z` 形式的补丁版本。
+- 较大的功能里程碑使用 `v0.Y.0` 形式的次版本。
+- `vX.0.0` 主版本只留给真正可交付的演示里程碑。
 
-See `docs/versioning.md` for the project policy.
+项目具体规则见 `docs/versioning.md`。
 
-## Quick Start
+## 快速开始
 
-Run the current QA CLI demo:
+运行当前 QA CLI 演示：
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
 ```
 
-Build a local policy knowledge index for grounded QA. Copy the local template,
-then put a Model Studio API key in `.env`. The file is ignored by Git:
+为有依据的 QA 创建本地保单知识索引。先复制本地模板，再将 Model Studio API Key 写入 `.env`。该文件会被 Git 忽略：
 
 ```bash
 cp .env.example .env
-# Edit .env locally: DASHSCOPE_API_KEY=your-key
+# 仅在本地编辑 .env：DASHSCOPE_API_KEY=your-key
 PYTHONPATH=src python3 -m claimguard.cli index data/knowledge/petcare-plus-policy-zh.md \
   --output .claimguard/petcare-plus-policy.json
 ```
 
-Run QA with the generated index:
+使用生成的索引运行 QA：
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-dispute.json \
   --index .claimguard/petcare-plus-policy.json
 ```
 
-The generated index is stored in `.claimguard/petcare-plus-policy.json`.
-API keys and generated indexes are intentionally not committed. When set, an
-explicit process environment variable overrides the same value in `.env`.
+生成的索引保存在 `.claimguard/petcare-plus-policy.json`。API Key 和生成的索引不会提交。当显式设置时，进程环境变量会覆盖 `.env` 中的同名值。
 
-See `docs/m3-rag-grounding.md` for the supported Chinese cases, index
-lifecycle, operator commands, and current limitations.
+支持的中文案例、索引生命周期、操作者命令和当前限制见 `docs/m3-rag-grounding.md`。
 
-Run semantic QA against the dedicated Chinese fixture:
+针对专用中文 fixture 运行语义质检：
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-semantic-qa.json --llm
 ```
 
-This is an explicit paid network call to Model Studio. It reuses the ignored
-local `.env` configuration (or explicit process environment variables), so no
-API key belongs in the command, fixture, or Git history. The semantic judge
-requires complete quote-backed evidence from an agent message. If its request
-or response cannot be validated, the command fails without producing semantic
-findings. See `docs/m4-semantic-qa.md` for the operating contract and limits.
+这是一次明确会产生费用的 Model Studio 网络调用。它复用被忽略的本地 `.env` 配置（或显式进程环境变量），因此 API Key 不应出现在命令、fixture 或 Git 历史中。语义裁判要求证据为一整条有来源的客服消息。如果请求或响应无法通过验证，命令会失败，且不会生成语义结论。运行契约和限制见 `docs/m4-semantic-qa.md`。
 
-The command returns a JSON QA report with:
+命令返回 JSON QA 报告，其中包括：
 
-- `conversation_id`: reviewed conversation fixture ID.
-- `scenario`: demo case description.
-- `score`: deterministic quality score.
-- `findings`: rule findings with rule ID, category, risk level, evidence, and recommendation.
+- `conversation_id`：被审查对话 fixture 的 ID。
+- `scenario`：演示案例说明。
+- `score`：确定性的质检得分。
+- `findings`：包含规则 ID、类别、风险等级、证据和建议的规则结论。
 
-Run the test suite:
+运行测试套件：
 
 ```bash
 python3 -m unittest discover -s tests
 ```
 
-Load the V1 rule catalog:
+加载 V1 规则目录：
 
 ```python
 from claimguard.rules import load_rule_catalog
@@ -189,8 +160,8 @@ catalog = load_rule_catalog()
 print(catalog.get("RAG-005").name)
 ```
 
-## Roadmap
+## 路线图
 
-![ClaimGuard AI roadmap](docs/assets/roadmap.svg)
+![ClaimGuard AI 路线图](docs/assets/roadmap.svg)
 
-The roadmap keeps small documentation or fixture updates in patch releases, while capability milestones move the minor version forward.
+路线图将小型文档或 fixture 更新放在补丁版本中，而将能力里程碑提升到次版本。

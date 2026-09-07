@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 520" width="1500" height="520" role="img" aria-labelledby="title desc">
   <title id="title">ClaimGuard AI Roadmap</title>
-  <desc id="desc">A versioned roadmap showing QA CLI, deterministic rules, RAG grounding, v0.4 semantic QA as the current milestone, then future citation and retrieval improvements, Copilot and API, and a polished v1 demo.</desc>
+  <desc id="desc">按版本展示 QA CLI、确定性规则、RAG 依据能力、作为当前里程碑的 v0.4 语义质检，以及后续的引用和检索改进、Copilot、API 和完善的 v1 演示。</desc>
   <style>
-    text { font-family: Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    text { font-family: 'Hiragino Sans GB', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; }
     .title { fill: #111827; font-size: 27px; font-weight: 700; }
     .subtitle { fill: #6b7280; font-size: 14px; }
     .version { fill: #111827; font-size: 15px; font-weight: 700; }
@@ -14,8 +14,8 @@
     <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 Z" fill="#2563eb"/></marker>
   </defs>
   <rect width="1500" height="520" fill="#ffffff"/>
-  <text x="65" y="55" class="title">ClaimGuard AI Roadmap</text>
-  <text x="65" y="82" class="subtitle">Patch tags cover narrow improvements; minor tags mark real workflow capabilities; major tags wait for a polished, shareable demo.</text>
+  <text x="65" y="55" class="title">ClaimGuard AI 路线图</text>
+  <text x="65" y="82" class="subtitle">补丁标签对应小型改进；次版本标记实际工作流能力；主版本等待完善且可分享的演示。</text>
 
   <line x1="110" y1="262" x2="742" y2="262" stroke="#2563eb" stroke-width="3"/>
   <line x1="778" y1="262" x2="1390" y2="262" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)"/>
@@ -26,61 +26,61 @@
     <rect x="60" y="120" width="170" height="82" rx="8" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.6"/>
     <text x="145" y="148" text-anchor="middle" class="version">v0.1.0</text>
     <text x="145" y="170" text-anchor="middle" class="label">QA CLI</text>
-    <text x="145" y="188" text-anchor="middle" class="small">fixture to JSON report</text>
-    <text x="145" y="296" text-anchor="middle" class="small">done</text>
+    <text x="145" y="188" text-anchor="middle" class="small">fixture 转 JSON 报告</text>
+    <text x="145" y="296" text-anchor="middle" class="small">已完成</text>
 
     <line x1="350" y1="262" x2="350" y2="202" stroke="#10b981" stroke-width="2"/>
     <circle cx="350" cy="262" r="11" fill="#10b981"/>
     <rect x="265" y="120" width="170" height="82" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
     <text x="350" y="148" text-anchor="middle" class="version">v0.2.0</text>
-    <text x="350" y="170" text-anchor="middle" class="label">Rule Runner</text>
-    <text x="350" y="188" text-anchor="middle" class="small">text-driven findings</text>
-    <text x="350" y="296" text-anchor="middle" class="small">done</text>
+    <text x="350" y="170" text-anchor="middle" class="label">规则运行器</text>
+    <text x="350" y="188" text-anchor="middle" class="small">由文本驱动的结论</text>
+    <text x="350" y="296" text-anchor="middle" class="small">已完成</text>
 
     <line x1="555" y1="262" x2="555" y2="202" stroke="#fb923c" stroke-width="2"/>
     <circle cx="555" cy="262" r="11" fill="#fb923c"/>
     <rect x="470" y="120" width="170" height="82" rx="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.6"/>
     <text x="555" y="148" text-anchor="middle" class="version">v0.3.0</text>
-    <text x="555" y="170" text-anchor="middle" class="label">RAG Grounding</text>
-    <text x="555" y="188" text-anchor="middle" class="small">local policy evidence</text>
-    <text x="555" y="296" text-anchor="middle" class="small">done</text>
+    <text x="555" y="170" text-anchor="middle" class="label">RAG 依据能力</text>
+    <text x="555" y="188" text-anchor="middle" class="small">本地保单证据</text>
+    <text x="555" y="296" text-anchor="middle" class="small">已完成</text>
 
     <line x1="760" y1="262" x2="760" y2="202" stroke="#7c3aed" stroke-width="2.5"/>
     <circle cx="760" cy="262" r="14" fill="#7c3aed" stroke="#4c1d95" stroke-width="2"/>
     <rect x="665" y="108" width="190" height="94" rx="8" fill="#faf5ff" stroke="#7c3aed" stroke-width="2"/>
     <text x="760" y="139" text-anchor="middle" class="version">v0.4.0</text>
-    <text x="760" y="162" text-anchor="middle" class="label">Semantic QA</text>
-    <text x="760" y="182" text-anchor="middle" class="small">opt-in Qwen judge</text>
+    <text x="760" y="162" text-anchor="middle" class="label">语义质检</text>
+    <text x="760" y="182" text-anchor="middle" class="small">可选 Qwen 裁判</text>
     <rect x="698" y="305" width="124" height="28" rx="6" fill="#ecfdf5" stroke="#10b981"/>
-    <text x="760" y="324" text-anchor="middle" class="current">CURRENT</text>
+    <text x="760" y="324" text-anchor="middle" class="current">当前</text>
 
     <line x1="965" y1="262" x2="965" y2="202" stroke="#9ca3af" stroke-width="2"/>
     <circle cx="965" cy="262" r="11" fill="#9ca3af"/>
     <rect x="880" y="120" width="170" height="82" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="6 4"/>
-    <text x="965" y="148" text-anchor="middle" class="version">Future QA</text>
+    <text x="965" y="148" text-anchor="middle" class="version">未来 QA</text>
     <text x="965" y="170" text-anchor="middle" class="label">Citation + Rerank</text>
-    <text x="965" y="188" text-anchor="middle" class="small">grounding precision</text>
-    <text x="965" y="296" text-anchor="middle" class="small">deferred</text>
+    <text x="965" y="188" text-anchor="middle" class="small">依据准确性</text>
+    <text x="965" y="296" text-anchor="middle" class="small">延后</text>
 
     <line x1="1170" y1="262" x2="1170" y2="202" stroke="#9ca3af" stroke-width="2"/>
     <circle cx="1170" cy="262" r="11" fill="#9ca3af"/>
     <rect x="1085" y="120" width="170" height="82" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="6 4"/>
-    <text x="1170" y="148" text-anchor="middle" class="version">Future Product</text>
+    <text x="1170" y="148" text-anchor="middle" class="version">未来产品</text>
     <text x="1170" y="170" text-anchor="middle" class="label">Copilot + API</text>
-    <text x="1170" y="188" text-anchor="middle" class="small">live service entry</text>
-    <text x="1170" y="296" text-anchor="middle" class="small">deferred</text>
+    <text x="1170" y="188" text-anchor="middle" class="small">在线服务入口</text>
+    <text x="1170" y="296" text-anchor="middle" class="small">延后</text>
 
     <line x1="1375" y1="262" x2="1375" y2="202" stroke="#f87171" stroke-width="2"/>
     <circle cx="1375" cy="262" r="11" fill="#f87171"/>
     <rect x="1290" y="120" width="170" height="82" rx="8" fill="#fef2f2" stroke="#f87171" stroke-width="1.6" stroke-dasharray="6 4"/>
     <text x="1375" y="148" text-anchor="middle" class="version">v1.0.0</text>
-    <text x="1375" y="170" text-anchor="middle" class="label">Portfolio Demo</text>
-    <text x="1375" y="188" text-anchor="middle" class="small">polished end-to-end app</text>
-    <text x="1375" y="296" text-anchor="middle" class="small">major gate</text>
+    <text x="1375" y="170" text-anchor="middle" class="label">作品集演示</text>
+    <text x="1375" y="188" text-anchor="middle" class="small">完善的端到端应用</text>
+    <text x="1375" y="296" text-anchor="middle" class="small">主版本门槛</text>
   </g>
 
   <rect x="80" y="372" width="1340" height="68" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="105" y="400" class="label">v0.4.0 is the current capability boundary</text>
-  <text x="105" y="422" class="small">Semantic QA is available only with --llm. Citation judgment, reranking, Copilot, persistence, and web/API endpoints remain future scope.</text>
-  <text x="65" y="483" class="small">Version policy: v0.0.Z for small changes, v0.Y.0 for capability milestones, and vX.0.0 only for an independently deliverable demo.</text>
+  <text x="105" y="400" class="label">v0.4.0 是当前能力边界</text>
+  <text x="105" y="422" class="small">语义质检仅在传入 --llm 时可用；Citation Judge、Reranking、Copilot、持久化和 Web/API 端点仍属未来范围。</text>
+  <text x="65" y="483" class="small">版本策略：小改动用 v0.0.Z，能力里程碑用 v0.Y.0，只有独立可交付演示才使用 vX.0.0。</text>
 </svg>
