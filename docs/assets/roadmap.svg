@@ -96,7 +96,7 @@
 
   <rect x="80" y="420" width="1340" height="92" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
   <text x="105" y="449" class="label">当前能力边界：v0.4 QA</text>
-  <text x="105" y="472" class="small">v0.4.2 不启用 Copilot 运行代码；所有模型仍默认使用 Qwen，OpenAI 托管 tracing 默认关闭，本地审计为正式路径。</text>
+  <text x="105" y="472" class="small">v0.4.2 不启用 Copilot 运行代码；所有模型仍默认使用 Qwen；OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启。</text>
   <text x="105" y="494" class="small">v0.5.0 才启用最小 Router -&gt; Policy Handoff；Claims、Complaint、审批与 Web 工作台按后续版本交付。</text>
   <text x="65" y="570" class="small">版本策略：补丁版本可冻结设计；能力里程碑使用 v0.Y.0；只有独立可交付的企业级演示才使用 v1.0.0。</text>
 </svg>

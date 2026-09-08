@@ -44,7 +44,9 @@ Web / CLI
         -> Complaint Agent
 ```
 
-应用保存本地 Session 和 AuditEvent。OpenAI 托管 tracing 默认关闭，本地结构化审计是正式路径；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
+第一版按单组织内部系统运行；每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。应用保存本地 Session 和 AuditEvent。
+
+OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。API Key 只从被忽略的 `.env` 或进程环境读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
 
 ## 版本边界
 

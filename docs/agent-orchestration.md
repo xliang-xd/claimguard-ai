@@ -62,11 +62,11 @@ Policy 解释保障与条款，Claims 解释理赔状态与结论，Complaint �
 | 疑难案例裁判 | `qwen3.8-max` | 延后 |
 | Reranking | `qwen3-rerank` | 延后 |
 
-语义请求使用严格 JSON Schema、`temperature: 0` 并关闭思考模式。本地 `CLAIMGUARD_SEMANTIC_MODEL` 设置可覆盖语义模型。配置保存在被忽略的 `.env` 或显式进程环境变量中；凭据从不作为报告数据或仓库内容保存。
+语义请求使用严格 JSON Schema、`temperature: 0` 并关闭思考模式。本地 `CLAIMGUARD_SEMANTIC_MODEL` 设置可覆盖语义模型。API Key 只从被忽略的 `.env` 或显式进程环境变量读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git。
 
 ## 运行与审计边界
 
-Agents SDK 负责 Agent、Handoff 和 Runner，Qwen Provider 隔离 Model Studio 的 base URL、认证和模型映射。OpenAI 托管 tracing 默认关闭，本地 Session 与结构化审计是正式路径。凭据只从被忽略的 `.env` 或进程环境读取，不进入 Agent、报告或审计内容。
+Agents SDK 负责 Agent、Handoff 和 Runner，Qwen Provider 隔离 Model Studio 的 base URL、认证和模型映射。第一版按单组织内部系统运行，但每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。OpenAI 托管 tracing 默认关闭；本地 Session 由应用保存，本地结构化审计始终开启并作为正式路径。
 
 Citation Judge、Reranking、完整 Copilot、持久化存储和 Web/API 工作台被有意延后。RAG 检索证据用于识别选中的条款，并不是引用准确性结论。
 

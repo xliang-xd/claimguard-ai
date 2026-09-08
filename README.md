@@ -65,7 +65,7 @@ Router
   -> Complaint Agent
 ```
 
-所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭，本地结构化审计是正式路径。QA Agent 保持独立，继续审查已完成对话。`v0.5.0` 才会启用最小 `Router -> Policy Handoff`；Claims、Complaint、审批和 Web/API 工作台继续按路线图后移。
+所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。QA Agent 保持独立，继续审查已完成对话。`v0.5.0` 才会启用最小 `Router -> Policy Handoff`；Claims、Complaint、审批和 Web/API 工作台继续按路线图后移。
 
 ## 当前里程碑
 
@@ -141,7 +141,7 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-di
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-semantic-qa.json --llm
 ```
 
-这是一次明确会产生费用的 Model Studio 网络调用。它复用被忽略的本地 `.env` 配置（或显式进程环境变量），因此 API Key 不应出现在命令、fixture 或 Git 历史中。语义裁判要求证据为一整条有来源的客服消息。如果请求或响应无法通过验证，命令会失败，且不会生成语义结论。运行契约和限制见 `docs/m4-semantic-qa.md`。
+这是一次明确会产生费用的 Model Studio 网络调用。API Key 只从被忽略的本地 `.env` 或显式进程环境变量读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入命令、fixture 或 Git 提交及历史。语义裁判要求证据为一整条有来源的客服消息。如果请求或响应无法通过验证，命令会失败，且不会生成语义结论。运行契约和限制见 `docs/m4-semantic-qa.md`。
 
 命令返回 JSON QA 报告，其中包括：
 
