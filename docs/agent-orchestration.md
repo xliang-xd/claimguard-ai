@@ -1,8 +1,8 @@
 # Agent 编排
 
-ClaimGuard AI 保持紧凑的 Agent 拓扑：一个已实现、用于已完成对话的 QA 工作流，以及一个面向实时客服的未来 Copilot 工作流。专用能力保持为工作流节点，而不是面向产品的独立 Agent。
+ClaimGuard AI 维护两条独立产品工作流：已实现、用于完成对话的 QA Agent，以及尚未启用、面向实时客服的 Copilot 多 Agent 工作流。`v0.4.2` 只冻结编排设计，不包含 Copilot 运行代码。
 
-## 当前 v0.4.0 QA 工作流
+## 当前 v0.4 QA 工作流
 
 ```text
 对话
@@ -32,36 +32,48 @@ ClaimGuard AI 保持紧凑的 Agent 拓扑：一个已实现、用于已完成�
 
 其生效的语义范围有意保持狭窄：`SEM-002` 至 `SEM-005` 分别覆盖回答相关性、服务态度不耐烦、投诉承认与安抚、以及无依据承诺。模型错误不会产生未经验证的语义结论。
 
-### Copilot Agent（延后）
+### Copilot Agent（设计检查点）
 
-未来的 Copilot Agent 将在实时聊天中协助客服。计划输出客户意图、推荐条款、建议回复和风险提示。它尚未在 `v0.4.0` 中实现。
+Copilot 采用 OpenAI Agents SDK for Python，Router 只负责识别主要意图，并在固定允许图中执行 Handoff：
+
+```text
+Router -> Policy Agent
+Router -> Claims Agent
+Router -> Complaint Agent
+```
+
+Policy 解释保障与条款，Claims 解释理赔状态与结论，Complaint 处理投诉与人工升级。Compliance Guard 横跨 Router、所有专业 Agent、工具调用和最终回复。QA Agent 不参与实时 Handoff，继续独立运行现有确定性规则、RAG 和可选语义质检。
+
+`v0.5.0` 只启用最小 `Router -> Policy Handoff`。Claims、Complaint、人工审批和副作用工具仍保持未启用。
 
 ## 国产模型默认配置
 
 面向成本与合规敏感的保险服务场景，ClaimGuard AI 默认使用阿里云 Model Studio / Qwen。配置 API 访问时，目标部署区域为中国大陆，例如 `cn-beijing`。
 
-| 能力 | 默认模型 | v0.4.0 状态 |
+| 能力 | 默认模型 | `v0.4.2` 状态 |
 | --- | --- | --- |
 | 语义裁判 | `qwen3.7-plus` | 仅传入 `--llm` 时生效 |
 | Embedding | `qwen3.7-text-embedding` | 用于索引创建和 `--index` 检索 |
-| 意图 Router | `qwen3.8-flash` | 延后 |
-| 规则选择器 | `qwen3.8-flash` | 延后 |
+| Copilot Router | `qwen3.8-flash` | 仅设计；`v0.5.0` 启用 |
+| Policy Agent | `qwen3.7-plus` | 仅设计；`v0.5.0` 启用 |
+| Claims Agent | `qwen3.7-plus` | 延后 |
+| Complaint Agent | `qwen3.7-plus` | 延后 |
 | Citation Judge | `qwen3.7-plus` | 延后 |
-| 风险 Guard | `qwen3.7-plus` | 随 Copilot 延后 |
-| 回复生成器 | `qwen3.7-plus` | 随 Copilot 延后 |
 | 疑难案例裁判 | `qwen3.8-max` | 延后 |
 | Reranking | `qwen3-rerank` | 延后 |
 
 语义请求使用严格 JSON Schema、`temperature: 0` 并关闭思考模式。本地 `CLAIMGUARD_SEMANTIC_MODEL` 设置可覆盖语义模型。配置保存在被忽略的 `.env` 或显式进程环境变量中；凭据从不作为报告数据或仓库内容保存。
 
-## 延后拓扑
+## 运行与审计边界
 
-Citation Judge、Reranking、Copilot 生成、持久化存储和 Web/API 端点被有意延后。RAG 检索证据用于识别选中的条款，并不是引用准确性结论。v0.4 图中将它们展示为未来扩展，而非当前运行时组件。
+Agents SDK 负责 Agent、Handoff 和 Runner，Qwen Provider 隔离 Model Studio 的 base URL、认证和模型映射。OpenAI 托管 tracing 默认关闭，本地 Session 与结构化审计是正式路径。凭据只从被忽略的 `.env` 或进程环境读取，不进入 Agent、报告或审计内容。
+
+Citation Judge、Reranking、完整 Copilot、持久化存储和 Web/API 工作台被有意延后。RAG 检索证据用于识别选中的条款，并不是引用准确性结论。
 
 ## 设计原则
 
-- 对外产品架构保持两个 Agent。
-- 除非需要独立状态、策略或所有权，否则专用步骤保持为工作流节点。
+- 实时 Copilot 与事后 QA 保持独立。
+- 专业 Agent 只访问其职责所需的工具与数据。
 - 判断与报告优先采用结构化 JSON 输出。
 - 让证据可追溯：确定性匹配、完整语义引文和检索条款元数据都保留在报告中。
 - 保持确定性规则、语义判断、RAG 和 fixture 可独立测试。

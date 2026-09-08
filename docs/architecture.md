@@ -1,6 +1,6 @@
 # 架构
 
-ClaimGuard AI 会依风险类型采用三条互补的判断路径。在 `v0.4.0` 中，确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。
+ClaimGuard AI 当前对外运行能力仍是 v0.4 QA。确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。`v0.4.2` 是后续 Copilot 的文档检查点，只记录设计，没有启用 Copilot 运行代码。
 
 ## 语义质检（当前）
 
@@ -30,9 +30,29 @@ ClaimGuard AI 会依风险类型采用三条互补的判断路径。在 `v0.4.0`
 
 本地索引是位于 `.claimguard/` 下、供操作者使用且被忽略的产物。Embedding 客户端只在创建索引和有依据检索时创建；旧版 QA CLI 仍然完全离线，也不需要 Key。
 
-## 延后工作
+## Copilot 运行时设计（尚未启用）
 
-`v0.4.0` 尚未实现 Citation Judge、Reranking、Copilot 回复生成、持久化或 Web/API 端点。检索证据只用于定位选中的条款，不构成引用准确性判断。
+Copilot 采用 OpenAI Agents SDK for Python。SDK 负责 Agent、固定 Handoff、Runner、interruptions 和 RunState；模型服务通过独立 Qwen Provider 接入中国大陆地域的 Model Studio。所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。
+
+```text
+Web / CLI
+  -> Agents SDK Runner
+     -> Qwen Provider
+     -> Router
+        -> Policy Agent
+        -> Claims Agent
+        -> Complaint Agent
+```
+
+应用保存本地 Session 和 AuditEvent。OpenAI 托管 tracing 默认关闭，本地结构化审计是正式路径；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
+
+## 版本边界
+
+- `v0.4.2`：只记录 Agents SDK、Handoff、Qwen Provider、本地 Session 与审计设计。
+- `v0.5.0`：才启用最小 `Router -> Policy Handoff`。
+- Claims、Complaint、Citation Judge、Reranking、持久化和 Web/API 工作台继续后移。
+
+现有 QA CLI 暂不迁移到 Agents SDK。检索证据只用于定位选中的条款，不构成引用准确性判断。
 
 ## 规划目录
 

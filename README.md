@@ -11,7 +11,7 @@ ClaimGuard AI 是一个聚焦于保险文字服务的 GitHub 演示项目。不�
 
 ![ClaimGuard AI 架构图](docs/assets/architecture.svg)
 
-当前 `v0.4.1` 核心由确定性 QA、可选的 RAG 依据检索，以及面向已完成中文对话的可选语义质检组成。只有当操作者显式传入 `--llm` 时，语义裁判才会执行一次；默认 CLI 保持离线。Citation Judge、Reranking、Copilot 生成与 Web/API 端点仍属于后续里程碑。QA 报告契约保持稳定。
+当前对外运行能力仍是 v0.4 QA：确定性 QA、可选的 RAG 依据检索，以及面向已完成中文对话的可选语义质检。只有当操作者显式传入 `--llm` 时，语义裁判才会执行一次；默认 CLI 保持离线。`v0.4.2` 只记录 Copilot 架构设计，没有启用 Copilot 运行代码，也不改变 QA 报告契约。
 
 ## V1 产品
 
@@ -54,21 +54,22 @@ QA 工作流审查已完成对话。
 
 `RAG-005` 是 V1 的重点演示案例，因为它计划在一个场景中展现意图路由、检索、引用准确性和有依据的回答质量。v0.4 仅附加检索到的条款证据；引用准确性仍需要未来的 Citation Judge。
 
-## 技术方向
+## Copilot 技术方向
 
-V1 应保持小而明确：
+Copilot 将采用 OpenAI Agents SDK for Python，编排采用固定的 `Router -> Policy / Claims / Complaint Handoff`：
 
 ```text
 Router
-  -> 知识工作流：RAG、引用依据、回复起草
-  -> QA 工作流：规则选择、判定、证据、评分
+  -> Policy Agent
+  -> Claims Agent
+  -> Complaint Agent
 ```
 
-项目应体现产品判断，而不是堆叠 Agent。相比庞大的多 Agent 图，一个紧凑的工作流更容易说明、测试和扩展。
+所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭，本地结构化审计是正式路径。QA Agent 保持独立，继续审查已完成对话。`v0.5.0` 才会启用最小 `Router -> Policy Handoff`；Claims、Complaint、审批和 Web/API 工作台继续按路线图后移。
 
 ## 当前里程碑
 
-当前软件包版本：`0.4.1`。
+当前软件包版本：`0.4.2`。
 
 M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，而非 fixture 中的 `expected_risks` 字段。在 LLM 行为仍处于开发阶段时，该字段继续作为测试预期数据。
 
@@ -81,6 +82,10 @@ M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，�
 `v0.3.1` 新增被 Git 忽略的项目本地 `.env` 配置回退。显式设置的进程环境变量仍具有更高优先级。
 
 `v0.4.0` 为 `SEM-002` 至 `SEM-005` 新增可选的语义质检。使用 `--llm` 时，一次 Qwen `qwen3.7-plus` 结构化输出请求会评估一段已完成对话。只有当语义结论的证据精确等于该对话中的一整条客服消息时，系统才会输出该结论；服务商或契约错误会返回失败，而不是产生未经验证的结论。
+
+`v0.4.1` 将解释性文档和技术图本地化为中文，不改变已交付功能范围。
+
+`v0.4.2` 冻结 OpenAI Agents SDK Copilot 架构：固定 Router 与 Policy、Claims、Complaint 的 Handoff 边界，保留 Qwen 默认模型、本地 Session 与本地审计，并明确 OpenAI 托管 tracing 默认关闭。此版本仍只运行 v0.4 QA，不包含 Copilot 运行时。
 
 ## 仓库结构
 

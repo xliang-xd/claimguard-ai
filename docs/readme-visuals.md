@@ -1,21 +1,21 @@
 # README 图示
 
-本文档记录截至 `v0.4.1` 更新的技术图。`v0.4.1` 将解释性标签本地化为中文，不改变图中标注的 `v0.4.0` 功能边界。
+本文档记录截至 `v0.4.2` 更新的技术图。`v0.4.2` 增加已批准的 Agents SDK Copilot 设计，但不改变当前 v0.4 QA 的运行行为。
 
 ## 资源
 
-- `docs/assets/architecture.svg`：独立展示索引构建与查询期 QA 路径，包括确定性规则、可选检索、可选语义质检、证据验证和去重。
+- `docs/assets/architecture.svg`：保留索引构建与当前 QA 路径，并以虚线展示未来的 `Web/CLI -> Agents SDK Runner -> Qwen Provider` 以及本地 Session / Audit 边界。
 - `docs/assets/architecture.png`：用于视觉检查的渲染预览。
-- `docs/assets/roadmap.svg`：从 `v0.1.0` 到计划中的作品集演示的版本路线图，`v0.4.0` 语义质检标记为当前。
+- `docs/assets/roadmap.svg`：从当前 `v0.4.2` 架构准备到 `v1.0.0` 企业级演示的版本路线图，`v0.5.0` Agents SDK 基础标记为下一项。
 - `docs/assets/roadmap.png`：用于视觉检查的渲染预览。
-- `docs/assets/agent-orchestration.svg`：已实现的 QA 工作流，以及延后的 Copilot 和高级判断能力，并标出国产模型默认配置。
+- `docs/assets/agent-orchestration.svg`：展示 `Router -> Policy / Claims / Complaint Handoff`、横跨所有 Copilot Agent 的 Compliance Guard，以及独立的 QA Agent。
 - `docs/assets/agent-orchestration.png`：用于视觉检查的渲染预览。
 
 ## 当前进度标记
 
-- 架构图将 `v0.4.0` 语义质检标为当前能力，并将索引创建与查询期检索分开。
-- 路线图将 `v0.4.0` 语义质检标为当前实现阶段；Citation Judge、Reranking、Copilot 和 API 属于未来范围。
-- Agent 编排图将可选语义质检标为当前，并只在延后泳道中展示 Copilot Agent。
+- 架构图将当前 v0.4 QA 与未来 Agents SDK 路径分开；未来路径与本地 Session / Audit 边界均使用虚线。
+- 路线图将 `v0.4.2` 架构准备标为当前，将 `v0.5.0` Agents SDK 基础标为下一项，后续依次为 `v0.6.0` 至 `v1.0.0`。
+- Agent 编排图只把 `Router -> Policy Handoff` 标为 `v0.5.0` 下一项；Claims 与 Complaint 保持后续状态，QA Agent 保持独立。
 - 所有图中的解释性标签均使用中文；Agent、Reranking、Web、API、模型名称和命令参数保持技术原文。
 
 ## 验证
