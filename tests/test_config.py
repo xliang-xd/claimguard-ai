@@ -18,6 +18,9 @@ class LocalEnvironmentTest(unittest.TestCase):
             dotenv_path.write_text(
                 "DASHSCOPE_API_KEY=local-test-key\n"
                 "CLAIMGUARD_EMBEDDING_MODEL=local-embedding-model\n"
+                "CLAIMGUARD_ROUTER_MODEL=local-router-model\n"
+                "CLAIMGUARD_POLICY_MODEL=local-policy-model\n"
+                "CLAIMGUARD_OPENAI_TRACING_ENABLED=false\n"
                 "UNRELATED_VALUE=must-not-load\n",
                 encoding="utf-8",
             )
@@ -28,6 +31,15 @@ class LocalEnvironmentTest(unittest.TestCase):
         self.assertEqual(environment["DASHSCOPE_API_KEY"], "local-test-key")
         self.assertEqual(
             environment["CLAIMGUARD_EMBEDDING_MODEL"], "local-embedding-model"
+        )
+        self.assertEqual(
+            environment["CLAIMGUARD_ROUTER_MODEL"], "local-router-model"
+        )
+        self.assertEqual(
+            environment["CLAIMGUARD_POLICY_MODEL"], "local-policy-model"
+        )
+        self.assertEqual(
+            environment["CLAIMGUARD_OPENAI_TRACING_ENABLED"], "false"
         )
         self.assertNotIn("UNRELATED_VALUE", environment)
 

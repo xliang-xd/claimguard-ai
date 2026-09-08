@@ -7,11 +7,13 @@ name = "claimguard-ai"
 version = "0.4.2"
 description = "Insurance text customer service Copilot and AI quality assurance system."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   { name = "Lmu-xd" }
 ]
-dependencies = []
+dependencies = [
+  "openai-agents>=0.14,<0.15",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
