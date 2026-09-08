@@ -72,6 +72,12 @@ class AgentRuntimeSettingsTest(unittest.TestCase):
 
         self.assertEqual(str(context.exception), "DASHSCOPE_API_KEY is required")
 
+    def test_repr_does_not_disclose_api_key(self):
+        api_key = "sensitive-test-key"
+        settings = load_agent_runtime_settings({"DASHSCOPE_API_KEY": api_key})
+
+        self.assertNotIn(api_key, repr(settings))
+
     def test_rejects_empty_model_value_by_configuration_name(self):
         with self.assertRaises(AgentSettingsError) as context:
             load_agent_runtime_settings(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 
 from claimguard.config import load_project_environment
@@ -18,7 +18,7 @@ class AgentSettingsError(ValueError):
 
 @dataclass(frozen=True)
 class AgentRuntimeSettings:
-    api_key: str
+    api_key: str = field(repr=False)
     base_url: str
     router_model: str
     policy_model: str
