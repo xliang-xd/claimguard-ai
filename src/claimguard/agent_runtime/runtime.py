@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 import re
 from typing import Literal, Protocol
@@ -65,17 +64,17 @@ class CopilotRuntime:
         self._run_config = run_config
         self._session_store = session_store
         self._runner = runner or SDKAgentRunner()
-        self._session_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
     async def run_turn(
         self,
         context: CopilotContext,
         message: str,
     ) -> CopilotTurnResult:
-        session_key = (context.tenant_id, context.session_id)
-        lock = self._session_locks.setdefault(session_key, asyncio.Lock())
-        async with lock:
-            try:
+        try:
+            async with self._session_store.exclusive_session(
+                context.tenant_id,
+                context.session_id,
+            ):
                 state = self._session_store.load(context.tenant_id, context.session_id)
                 starting_agent, agent_input = self._resume_turn(state, context, message)
                 result = await self._runner.run(
@@ -109,8 +108,8 @@ class CopilotRuntime:
                     draft=output.draft,
                     audit_id=audit_id,
                 )
-            except Exception:
-                return self._failed_result(context)
+        except Exception:
+            return self._failed_result(context)
 
     def _resume_turn(
         self,

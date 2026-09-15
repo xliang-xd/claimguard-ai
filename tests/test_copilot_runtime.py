@@ -72,6 +72,32 @@ class SerializedRunner:
         )
 
 
+class ReusableSerializedRunner:
+    def __init__(self):
+        self.inputs = []
+
+    def prepare_pair(self):
+        self._pair_start = len(self.inputs)
+        self.first_turn_started = asyncio.Event()
+        self.release_first_turn = asyncio.Event()
+        return self._pair_start
+
+    async def run(self, starting_agent, agent_input, *, context, run_config):
+        self.inputs.append(agent_input)
+        if len(self.inputs) == self._pair_start + 1:
+            self.first_turn_started.set()
+            await self.release_first_turn.wait()
+        if isinstance(agent_input, str):
+            input_items = [{"role": "user", "content": agent_input}]
+        else:
+            input_items = [*agent_input]
+        return ScriptedRunResult(
+            "Policy Agent",
+            CopilotAgentOutput(status="draft_ready", draft="客服草稿：已处理"),
+            input_items,
+        )
+
+
 class FailingCompletionAuditSink:
     def __init__(self):
         self.events = []
@@ -109,7 +135,49 @@ def make_runtime(runner, store):
     )
 
 
+async def run_serialized_pair(
+    first_runtime,
+    second_runtime,
+    runner,
+    first_message,
+    second_message,
+):
+    pair_start = runner.prepare_pair()
+    context = make_context()
+    first_turn = asyncio.create_task(first_runtime.run_turn(context, first_message))
+    await runner.first_turn_started.wait()
+    second_turn = asyncio.create_task(second_runtime.run_turn(context, second_message))
+    await asyncio.sleep(0)
+    inputs_before_release = list(runner.inputs[pair_start:])
+    runner.release_first_turn.set()
+    return inputs_before_release, await asyncio.gather(first_turn, second_turn)
+
+
 class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_shared_store_serializes_turns_from_distinct_runtimes(self):
+        runner = ReusableSerializedRunner()
+        store = InMemorySessionStore()
+        first_runtime = make_runtime(runner, store)
+        second_runtime = make_runtime(runner, store)
+
+        inputs_before_release, results = await run_serialized_pair(
+            first_runtime,
+            second_runtime,
+            runner,
+            "第一条消息",
+            "第二条消息",
+        )
+
+        self.assertEqual(inputs_before_release, ["第一条消息"])
+        self.assertEqual([result.status for result in results], ["draft_ready"] * 2)
+        self.assertEqual(
+            runner.inputs[1],
+            [
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+            ],
+        )
+
     async def test_same_session_turns_are_serialized_and_preserve_history(self):
         runner = SerializedRunner()
         store = InMemorySessionStore()
@@ -341,6 +409,57 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             context.audit_sink.events[-1].details,
             {"outcome": "human_takeover"},
+        )
+
+
+class CopilotRuntimeCrossEventLoopTest(unittest.TestCase):
+    def test_store_session_serialization_can_be_reused_across_event_loops(self):
+        runner = ReusableSerializedRunner()
+        store = InMemorySessionStore()
+        runtime = make_runtime(runner, store)
+
+        first_inputs, first_results = asyncio.run(
+            run_serialized_pair(
+                runtime,
+                runtime,
+                runner,
+                "第一条消息",
+                "第二条消息",
+            )
+        )
+        second_inputs, second_results = asyncio.run(
+            run_serialized_pair(
+                runtime,
+                runtime,
+                runner,
+                "第三条消息",
+                "第四条消息",
+            )
+        )
+
+        self.assertEqual(first_inputs, ["第一条消息"])
+        self.assertEqual(
+            second_inputs,
+            [
+                [
+                    {"role": "user", "content": "第一条消息"},
+                    {"role": "user", "content": "第二条消息"},
+                    {"role": "user", "content": "第三条消息"},
+                ]
+            ],
+        )
+        self.assertEqual(
+            [result.status for result in [*first_results, *second_results]],
+            ["draft_ready"] * 4,
+        )
+        self.assertEqual(
+            store.load("tenant-a", "session-1").input_items,
+            (
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+                {"role": "user", "content": "第三条消息"},
+                {"role": "user", "content": "第四条消息"},
+            ),
         )
 
 
