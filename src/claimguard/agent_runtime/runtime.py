@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import re
 from typing import Literal, Protocol
@@ -64,49 +65,52 @@ class CopilotRuntime:
         self._run_config = run_config
         self._session_store = session_store
         self._runner = runner or SDKAgentRunner()
+        self._session_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
     async def run_turn(
         self,
         context: CopilotContext,
         message: str,
     ) -> CopilotTurnResult:
-        try:
-            state = self._session_store.load(context.tenant_id, context.session_id)
-            starting_agent, agent_input = self._resume_turn(state, context, message)
-            result = await self._runner.run(
-                starting_agent,
-                agent_input,
-                context=context,
-                run_config=self._run_config,
-            )
-            output = self._validated_output(result.final_output)
-            last_agent_name = self._validated_last_agent_name(result.last_agent.name)
-            input_items = self._validated_input_items(result.to_input_list())
-            self._session_store.save(
-                ConversationState(
+        session_key = (context.tenant_id, context.session_id)
+        lock = self._session_locks.setdefault(session_key, asyncio.Lock())
+        async with lock:
+            try:
+                state = self._session_store.load(context.tenant_id, context.session_id)
+                starting_agent, agent_input = self._resume_turn(state, context, message)
+                result = await self._runner.run(
+                    starting_agent,
+                    agent_input,
+                    context=context,
+                    run_config=self._run_config,
+                )
+                output = self._validated_output(result.final_output)
+                last_agent_name = self._validated_last_agent_name(result.last_agent.name)
+                input_items = self._validated_input_items(result.to_input_list())
+                next_state = ConversationState(
                     tenant_id=context.tenant_id,
                     session_id=context.session_id,
                     user_id=context.user_id,
                     current_agent=last_agent_name,
                     input_items=input_items,
                 )
-            )
-            audit_id = self._record(
-                context,
-                "run_completed",
-                {"current_agent": last_agent_name, "outcome": output.status},
-            )
-            if not audit_id:
+                audit_id = self._record(
+                    context,
+                    "run_completed",
+                    {"current_agent": last_agent_name, "outcome": output.status},
+                )
+                if not audit_id:
+                    return self._failed_result(context)
+                self._session_store.save(next_state)
+                return CopilotTurnResult(
+                    status=output.status,
+                    session_id=context.session_id,
+                    current_agent=last_agent_name,
+                    draft=output.draft,
+                    audit_id=audit_id,
+                )
+            except Exception:
                 return self._failed_result(context)
-            return CopilotTurnResult(
-                status=output.status,
-                session_id=context.session_id,
-                current_agent=last_agent_name,
-                draft=output.draft,
-                audit_id=audit_id,
-            )
-        except Exception:
-            return self._failed_result(context)
 
     def _resume_turn(
         self,

@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -49,6 +50,39 @@ class FailingRunner:
         raise RuntimeError("Authorization: Bearer test-secret")
 
 
+class SerializedRunner:
+    def __init__(self):
+        self.first_turn_started = asyncio.Event()
+        self.release_first_turn = asyncio.Event()
+        self.inputs = []
+
+    async def run(self, starting_agent, agent_input, *, context, run_config):
+        self.inputs.append(agent_input)
+        if len(self.inputs) == 1:
+            self.first_turn_started.set()
+            await self.release_first_turn.wait()
+        if isinstance(agent_input, str):
+            input_items = [{"role": "user", "content": agent_input}]
+        else:
+            input_items = [*agent_input]
+        return ScriptedRunResult(
+            "Policy Agent",
+            CopilotAgentOutput(status="draft_ready", draft="客服草稿：已处理"),
+            input_items,
+        )
+
+
+class FailingCompletionAuditSink:
+    def __init__(self):
+        self.events = []
+
+    def record(self, event):
+        if event.event_type == "run_completed":
+            raise RuntimeError("Authorization: Bearer test-secret")
+        self.events.append(event)
+        return f"audit-{len(self.events):06d}"
+
+
 def make_context():
     return CopilotContext(
         tenant_id="tenant-a",
@@ -76,6 +110,77 @@ def make_runtime(runner, store):
 
 
 class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_same_session_turns_are_serialized_and_preserve_history(self):
+        runner = SerializedRunner()
+        store = InMemorySessionStore()
+        runtime = make_runtime(runner, store)
+        context = make_context()
+
+        first_turn = asyncio.create_task(runtime.run_turn(context, "第一条消息"))
+        await runner.first_turn_started.wait()
+        second_turn = asyncio.create_task(runtime.run_turn(context, "第二条消息"))
+        await asyncio.sleep(0)
+
+        self.assertEqual(runner.inputs, ["第一条消息"])
+
+        runner.release_first_turn.set()
+        await asyncio.gather(first_turn, second_turn)
+
+        self.assertEqual(
+            runner.inputs[1],
+            [
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+            ],
+        )
+        self.assertEqual(
+            store.load("tenant-a", "session-1").input_items,
+            (
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+            ),
+        )
+
+    async def test_failed_completion_audit_does_not_advance_session_state(self):
+        prior_state = ConversationState(
+            "tenant-a",
+            "session-1",
+            "agent-7",
+            "Policy Agent",
+            ({"role": "user", "content": "已有消息"},),
+        )
+        store = InMemorySessionStore()
+        store.save(prior_state)
+        runner = ScriptedRunner(
+            last_agent_name="Policy Agent",
+            output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：不应保存"),
+            result_input_items=(
+                {"role": "user", "content": "已有消息"},
+                {"role": "user", "content": "新消息"},
+            ),
+        )
+        context = make_context()
+        context = CopilotContext(
+            tenant_id=context.tenant_id,
+            session_id=context.session_id,
+            user_id=context.user_id,
+            knowledge_index=context.knowledge_index,
+            embedding_client=context.embedding_client,
+            audit_sink=FailingCompletionAuditSink(),
+        )
+
+        result = await make_runtime(runner, store).run_turn(context, "新消息")
+
+        self.assertEqual(result.status, "human_takeover")
+        self.assertEqual(result.draft, "")
+        self.assertNotIn("test-secret", repr(result))
+        self.assertEqual(store.load("tenant-a", "session-1"), prior_state)
+        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {"outcome": "human_takeover"},
+        )
+
     async def test_starts_at_router_then_persists_last_agent(self):
         history = (
             {"role": "user", "content": "等待期是什么？"},
