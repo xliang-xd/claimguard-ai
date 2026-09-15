@@ -9,7 +9,7 @@ from claimguard.agent_runtime.settings import AgentRuntimeSettings
 
 
 class AgentProviderError(ValueError):
-    """Raised when Agent model provider configuration is invalid."""
+    """代理模型提供者配置无效时引发。"""
 
 
 class QwenModelProvider(ModelProvider):
