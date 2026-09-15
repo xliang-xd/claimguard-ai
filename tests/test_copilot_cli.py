@@ -2,6 +2,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 import json
 from pathlib import Path
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -77,6 +78,34 @@ class CopilotCLITest(unittest.TestCase):
 
         self.assertEqual(code, 2)
         self.assertEqual(stderr.getvalue(), "Knowledge index not found\n")
+
+    def test_module_entrypoint_reports_missing_index_to_operator(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "claimguard.copilot_cli",
+                "--tenant-id",
+                "demo-tenant",
+                "--user-id",
+                "agent-7",
+                "--session-id",
+                "demo-session",
+                "--index",
+                "missing.json",
+                "等待期是什么？",
+            ],
+            check=False,
+            cwd=repository_root,
+            env={"PYTHONPATH": "src"},
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "Knowledge index not found\n")
 
     def test_setup_error_is_generic_and_does_not_disclose_sensitive_details(self):
         async def execute_turn(_args):
