@@ -75,7 +75,7 @@ class CopilotAgentsTest(unittest.TestCase):
         self.assertIn('status="draft_ready"', agents.policy.instructions)
         self.assertIn("客服草稿", agents.policy.instructions)
 
-    def test_output_contract_only_allows_typed_statuses_and_draft(self):
+    def test_output_contract_accepts_valid_state_combinations(self):
         draft = CopilotAgentOutput(status="draft_ready", draft="客服草稿：请参考条款")
         takeover = CopilotAgentOutput(status="human_takeover", draft="")
 
@@ -83,6 +83,19 @@ class CopilotAgentsTest(unittest.TestCase):
         self.assertEqual(draft.draft, "客服草稿：请参考条款")
         self.assertEqual(takeover.status, "human_takeover")
         self.assertEqual(takeover.draft, "")
+
+    def test_output_contract_rejects_invalid_state_combinations(self):
+        invalid_outputs = [
+            {"status": "human_takeover", "draft": "客服草稿：请参考条款"},
+            {"status": "draft_ready", "draft": ""},
+            {"status": "draft_ready", "draft": "请参考条款"},
+        ]
+
+        for output in invalid_outputs:
+            with self.subTest(output=output), self.assertRaises(ValidationError):
+                CopilotAgentOutput(**output)
+
+    def test_output_contract_rejects_unknown_status(self):
         with self.assertRaises(ValidationError):
             CopilotAgentOutput(status="unknown", draft="")
 

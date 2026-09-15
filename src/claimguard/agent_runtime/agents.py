@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from agents import Agent, FunctionTool, handoff
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from claimguard.agent_runtime.settings import AgentRuntimeSettings
 from claimguard.agent_runtime.state import CopilotContext
@@ -39,6 +39,14 @@ status="human_takeover"，draft=""。
 class CopilotAgentOutput(BaseModel):
     status: Literal["draft_ready", "human_takeover"]
     draft: str
+
+    @model_validator(mode="after")
+    def validate_state(self) -> CopilotAgentOutput:
+        if self.status == "human_takeover" and self.draft != "":
+            raise ValueError("human_takeover requires an empty draft")
+        if self.status == "draft_ready" and not self.draft.startswith("客服草稿："):
+            raise ValueError("draft_ready requires a customer-service draft")
+        return self
 
 
 @dataclass(frozen=True)
