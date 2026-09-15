@@ -46,6 +46,8 @@ Web / CLI
 
 第一版按单组织内部系统运行；每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。应用保存本地 Session 和 AuditEvent。
 
+SessionStore 的 `exclusive_session` 是可选能力。只提供 `load` 和 `save` 的旧 Store 仍可运行，Runtime 会在当前实例和当前事件循环内按会话串行化；该兼容回退不能协调多个 Runtime 实例或事件循环共享同一 Store 的 `load-run-save` 操作。需要这一并发保证的 Store 必须实现 `exclusive_session`。
+
 OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。API Key 只从被忽略的 `.env` 或进程环境读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
 
 ## 版本边界

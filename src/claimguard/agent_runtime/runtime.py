@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 import re
-from typing import Literal, Protocol
+from typing import AsyncContextManager, Literal, Protocol
 
 from agents import Agent, RunConfig, Runner
 
@@ -64,6 +66,7 @@ class CopilotRuntime:
         self._run_config = run_config
         self._session_store = session_store
         self._runner = runner or SDKAgentRunner()
+        self._legacy_session_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
     async def run_turn(
         self,
@@ -71,10 +74,7 @@ class CopilotRuntime:
         message: str,
     ) -> CopilotTurnResult:
         try:
-            async with self._session_store.exclusive_session(
-                context.tenant_id,
-                context.session_id,
-            ):
+            async with self._exclusive_session(context.tenant_id, context.session_id):
                 state = self._session_store.load(context.tenant_id, context.session_id)
                 starting_agent, agent_input = self._resume_turn(state, context, message)
                 result = await self._runner.run(
@@ -110,6 +110,28 @@ class CopilotRuntime:
                 )
         except Exception:
             return self._failed_result(context)
+
+    def _exclusive_session(
+        self,
+        tenant_id: str,
+        session_id: str,
+    ) -> AsyncContextManager[None]:
+        exclusive_session = getattr(self._session_store, "exclusive_session", None)
+        if callable(exclusive_session):
+            return exclusive_session(tenant_id, session_id)
+        return self._legacy_exclusive_session(tenant_id, session_id)
+
+    @asynccontextmanager
+    async def _legacy_exclusive_session(self, tenant_id: str, session_id: str):
+        """兼容仅实现 load/save 的旧 SessionStore。
+
+        回退锁只在当前 CopilotRuntime 实例和事件循环内生效；多个 Runtime
+        实例或事件循环共享旧 Store 时，不能保证 load-run-save 的会话串行化。
+        这类 Store 应实现 exclusive_session 以获得跨运行时、跨事件循环的保证。
+        """
+        lock = self._legacy_session_locks.setdefault((tenant_id, session_id), asyncio.Lock())
+        async with lock:
+            yield
 
     def _resume_turn(
         self,

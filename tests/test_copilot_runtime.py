@@ -1,6 +1,8 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import sys
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -98,6 +100,67 @@ class ReusableSerializedRunner:
         )
 
 
+class HotAndColdSessionRunner:
+    def __init__(self):
+        self.hot_turn_started = asyncio.Event()
+        self.release_hot_turn = asyncio.Event()
+        self.cold_turn_started = asyncio.Event()
+
+    async def run(self, starting_agent, agent_input, *, context, run_config):
+        if context.session_id == "hot-session" and not self.hot_turn_started.is_set():
+            self.hot_turn_started.set()
+            await self.release_hot_turn.wait()
+        if context.session_id == "cold-session":
+            self.cold_turn_started.set()
+        input_items = (
+            [{"role": "user", "content": agent_input}]
+            if isinstance(agent_input, str)
+            else [*agent_input]
+        )
+        return ScriptedRunResult(
+            "Policy Agent",
+            CopilotAgentOutput(status="draft_ready", draft="客服草稿：已处理"),
+            input_items,
+        )
+
+
+class CrossLoopSerializedRunner:
+    def __init__(self):
+        self.first_turn_started = threading.Event()
+        self.release_first_turn = threading.Event()
+        self.inputs = []
+        self._inputs_guard = threading.Lock()
+
+    async def run(self, starting_agent, agent_input, *, context, run_config):
+        with self._inputs_guard:
+            self.inputs.append(agent_input)
+            is_first_turn = len(self.inputs) == 1
+        if is_first_turn:
+            self.first_turn_started.set()
+            await asyncio.to_thread(self.release_first_turn.wait)
+        input_items = (
+            [{"role": "user", "content": agent_input}]
+            if isinstance(agent_input, str)
+            else [*agent_input]
+        )
+        return ScriptedRunResult(
+            "Policy Agent",
+            CopilotAgentOutput(status="draft_ready", draft="客服草稿：已处理"),
+            input_items,
+        )
+
+
+class LegacySessionStore:
+    def __init__(self):
+        self.states = {}
+
+    def load(self, tenant_id, session_id):
+        return self.states.get((tenant_id, session_id))
+
+    def save(self, state):
+        self.states[(state.tenant_id, state.session_id)] = state
+
+
 class FailingCompletionAuditSink:
     def __init__(self):
         self.events = []
@@ -154,6 +217,80 @@ async def run_serialized_pair(
 
 
 class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_hot_session_waiters_do_not_block_a_cold_session(self):
+        asyncio.get_running_loop().set_default_executor(ThreadPoolExecutor(max_workers=1))
+        runner = HotAndColdSessionRunner()
+        runtime = make_runtime(runner, InMemorySessionStore())
+        hot_context = CopilotContext(
+            tenant_id="tenant-a",
+            session_id="hot-session",
+            user_id="agent-7",
+            knowledge_index=MagicMock(),
+            embedding_client=MagicMock(),
+            audit_sink=InMemoryAuditSink(),
+        )
+        cold_context = CopilotContext(
+            tenant_id="tenant-a",
+            session_id="cold-session",
+            user_id="agent-7",
+            knowledge_index=MagicMock(),
+            embedding_client=MagicMock(),
+            audit_sink=InMemoryAuditSink(),
+        )
+        hot_turn = asyncio.create_task(runtime.run_turn(hot_context, "第一条热会话消息"))
+        await runner.hot_turn_started.wait()
+        waiting_turns = [
+            asyncio.create_task(runtime.run_turn(hot_context, f"排队消息 {index}"))
+            for index in range(32)
+        ]
+        await asyncio.sleep(0)
+        cold_turn = asyncio.create_task(runtime.run_turn(cold_context, "冷会话消息"))
+
+        try:
+            await asyncio.wait_for(runner.cold_turn_started.wait(), timeout=0.2)
+        finally:
+            runner.release_hot_turn.set()
+            await asyncio.gather(hot_turn, *waiting_turns, cold_turn)
+
+        self.assertEqual((await cold_turn).status, "draft_ready")
+
+    async def test_legacy_store_without_exclusive_session_still_runs_turn(self):
+        store = LegacySessionStore()
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：已处理"),
+                result_input_items=({"role": "user", "content": "旧接口消息"},),
+            ),
+            store,
+        ).run_turn(make_context(), "旧接口消息")
+
+        self.assertEqual(result.status, "draft_ready")
+        self.assertEqual(store.load("tenant-a", "session-1").current_agent, "Policy Agent")
+
+    async def test_legacy_store_serializes_turns_within_one_runtime(self):
+        runner = SerializedRunner()
+        runtime = make_runtime(runner, LegacySessionStore())
+        context = make_context()
+
+        first_turn = asyncio.create_task(runtime.run_turn(context, "第一条消息"))
+        await runner.first_turn_started.wait()
+        second_turn = asyncio.create_task(runtime.run_turn(context, "第二条消息"))
+        await asyncio.sleep(0)
+
+        self.assertEqual(runner.inputs, ["第一条消息"])
+
+        runner.release_first_turn.set()
+        await asyncio.gather(first_turn, second_turn)
+
+        self.assertEqual(
+            runner.inputs[1],
+            [
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+            ],
+        )
+
     async def test_shared_store_serializes_turns_from_distinct_runtimes(self):
         runner = ReusableSerializedRunner()
         store = InMemorySessionStore()
@@ -413,6 +550,46 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
 
 
 class CopilotRuntimeCrossEventLoopTest(unittest.TestCase):
+    def test_shared_store_serializes_distinct_runtimes_on_concurrent_event_loops(self):
+        runner = CrossLoopSerializedRunner()
+        store = InMemorySessionStore()
+        first_runtime = make_runtime(runner, store)
+        second_runtime = make_runtime(runner, store)
+        context = make_context()
+        first_results = []
+
+        def run_first_turn():
+            first_results.append(asyncio.run(first_runtime.run_turn(context, "第一条消息")))
+
+        async def run_second_turn():
+            first_thread = threading.Thread(target=run_first_turn)
+            first_thread.start()
+            try:
+                await asyncio.to_thread(runner.first_turn_started.wait)
+                second_turn = asyncio.create_task(
+                    second_runtime.run_turn(context, "第二条消息")
+                )
+                await asyncio.sleep(0)
+                self.assertEqual(runner.inputs, ["第一条消息"])
+                runner.release_first_turn.set()
+                return await second_turn
+            finally:
+                runner.release_first_turn.set()
+                await asyncio.to_thread(first_thread.join)
+                self.assertFalse(first_thread.is_alive())
+
+        second_result = asyncio.run(run_second_turn())
+
+        self.assertEqual([result.status for result in first_results], ["draft_ready"])
+        self.assertEqual(second_result.status, "draft_ready")
+        self.assertEqual(
+            store.load("tenant-a", "session-1").input_items,
+            (
+                {"role": "user", "content": "第一条消息"},
+                {"role": "user", "content": "第二条消息"},
+            ),
+        )
+
     def test_store_session_serialization_can_be_reused_across_event_loops(self):
         runner = ReusableSerializedRunner()
         store = InMemorySessionStore()

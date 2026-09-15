@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from _thread import LockType
+from collections import deque
 from dataclasses import dataclass
 from threading import Lock
 from typing import AsyncContextManager, Protocol
@@ -35,6 +35,8 @@ class SessionStore(Protocol):
 
     def save(self, state: ConversationState) -> None: ...
 
+
+class ExclusiveSessionStore(SessionStore, Protocol):
     def exclusive_session(
         self,
         tenant_id: str,
@@ -45,7 +47,7 @@ class SessionStore(Protocol):
 class InMemorySessionStore:
     def __init__(self) -> None:
         self._states: dict[tuple[str, str], ConversationState] = {}
-        self._session_locks: dict[tuple[str, str], LockType] = {}
+        self._session_locks: dict[tuple[str, str], _SessionGate] = {}
         self._session_locks_guard = Lock()
 
     def load(self, tenant_id: str, session_id: str) -> ConversationState | None:
@@ -61,36 +63,79 @@ class InMemorySessionStore:
     ) -> AsyncContextManager[None]:
         session_key = _session_key(tenant_id, session_id)
         with self._session_locks_guard:
-            lock = self._session_locks.setdefault(session_key, Lock())
-        return _SessionCriticalSection(lock)
+            gate = self._session_locks.setdefault(session_key, _SessionGate())
+        return _SessionCriticalSection(gate)
+
+
+class _SessionGate:
+    """将同一会话的等待者移交到各自的事件循环，不占用默认线程池。"""
+
+    def __init__(self) -> None:
+        self._guard = Lock()
+        self._held = False
+        self._waiters: deque[_SessionWaiter] = deque()
+
+    async def acquire(self) -> None:
+        loop = asyncio.get_running_loop()
+        waiter = _SessionWaiter(loop.create_future(), loop)
+        with self._guard:
+            if not self._held:
+                self._held = True
+                return
+            self._waiters.append(waiter)
+        try:
+            await asyncio.shield(waiter.future)
+        except BaseException:
+            with self._guard:
+                granted = waiter.granted
+                waiter.active = False
+            if granted:
+                self.release()
+            raise
+
+    def release(self) -> None:
+        with self._guard:
+            while self._waiters:
+                waiter = self._waiters.popleft()
+                if waiter.active:
+                    waiter.granted = True
+                    break
+            else:
+                self._held = False
+                return
+        try:
+            waiter.loop.call_soon_threadsafe(_wake_waiter, waiter)
+        except RuntimeError:
+            with self._guard:
+                waiter.active = False
+            self.release()
+
+
+@dataclass
+class _SessionWaiter:
+    future: asyncio.Future[None]
+    loop: asyncio.AbstractEventLoop
+    active: bool = True
+    granted: bool = False
+
+
+def _wake_waiter(waiter: _SessionWaiter) -> None:
+    if not waiter.future.done():
+        waiter.future.set_result(None)
 
 
 class _SessionCriticalSection:
-    def __init__(self, lock: LockType) -> None:
-        self._lock = lock
+    def __init__(self, gate: _SessionGate) -> None:
+        self._gate = gate
         self._acquired = False
 
     async def __aenter__(self) -> None:
-        acquire_task = asyncio.create_task(asyncio.to_thread(self._lock.acquire))
-        try:
-            await asyncio.shield(acquire_task)
-        except BaseException:
-            acquire_task.add_done_callback(self._release_after_cancelled_acquire)
-            raise
+        await self._gate.acquire()
         self._acquired = True
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         if self._acquired:
-            self._lock.release()
-
-    def _release_after_cancelled_acquire(self, acquire_task) -> None:
-        if acquire_task.cancelled():
-            return
-        try:
-            acquire_task.result()
-        except BaseException:
-            return
-        self._lock.release()
+            self._gate.release()
 
 
 def _session_key(tenant_id: str, session_id: str) -> tuple[str, str]:
