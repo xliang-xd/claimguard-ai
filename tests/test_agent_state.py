@@ -14,6 +14,11 @@ from claimguard.agent_runtime.audit import (
 from claimguard.agent_runtime.state import ConversationState, InMemorySessionStore
 
 
+class BypassingAuditEvent(AuditEvent):
+    def validate(self) -> None:
+        pass
+
+
 class AgentStateTest(unittest.TestCase):
     def test_session_store_is_scoped_by_tenant_and_session(self):
         store = InMemorySessionStore()
@@ -197,6 +202,86 @@ class AgentStateTest(unittest.TestCase):
                 sink.record(event)
 
             self.assertFalse(path.exists())
+
+    def test_in_memory_audit_sink_revalidates_no_op_subclass_credentials(self):
+        event = BypassingAuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"token": "redacted"}
+        sink = InMemoryAuditSink()
+
+        with self.assertRaisesRegex(ValueError, "sensitive audit field"):
+            sink.record(event)
+
+        self.assertEqual(sink.events, [])
+
+    def test_jsonl_audit_sink_revalidates_no_op_subclass_credentials(self):
+        event = BypassingAuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"token": "redacted"}
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "audit.jsonl"
+            sink = JsonlAuditSink(path)
+
+            with self.assertRaisesRegex(ValueError, "sensitive audit field"):
+                sink.record(event)
+
+            self.assertFalse(path.exists())
+
+    def test_in_memory_audit_sink_revalidates_no_op_subclass_history(self):
+        event = BypassingAuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"history": "redacted"}
+        sink = InMemoryAuditSink()
+
+        with self.assertRaisesRegex(ValueError, "raw customer message"):
+            sink.record(event)
+
+        self.assertEqual(sink.events, [])
+
+    def test_jsonl_audit_sink_revalidates_no_op_subclass_history(self):
+        event = BypassingAuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"history": "redacted"}
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "audit.jsonl"
+            sink = JsonlAuditSink(path)
+
+            with self.assertRaisesRegex(ValueError, "raw customer message"):
+                sink.record(event)
+
+            self.assertFalse(path.exists())
+
+    def test_no_op_subclass_cannot_bypass_construction_validation(self):
+        with self.assertRaisesRegex(ValueError, "sensitive audit field"):
+            BypassingAuditEvent(
+                event_type="run_completed",
+                tenant_id="tenant-a",
+                session_id="session-1",
+                user_id="agent-7",
+                details={"metadata": {"token": "redacted"}},
+            )
 
     def test_in_memory_audit_sink_assigns_sequential_audit_ids(self):
         sink = InMemoryAuditSink()

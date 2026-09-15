@@ -36,7 +36,7 @@ class AuditEvent:
     details: dict[str, object]
 
     def __post_init__(self) -> None:
-        self.validate()
+        _validate_audit_details(self.details)
 
     def validate(self) -> None:
         _validate_audit_details(self.details)
@@ -51,7 +51,7 @@ class InMemoryAuditSink:
         self.events: list[AuditEvent] = []
 
     def record(self, event: AuditEvent) -> str:
-        event.validate()
+        _validate_audit_details(event.details)
         self.events.append(event)
         return f"audit-{len(self.events):06d}"
 
@@ -61,7 +61,7 @@ class JsonlAuditSink:
         self._path = path
 
     def record(self, event: AuditEvent) -> str:
-        event.validate()
+        _validate_audit_details(event.details)
         audit_id = f"audit-{uuid4().hex}"
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
