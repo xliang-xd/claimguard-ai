@@ -298,6 +298,31 @@ class AgentStateTest(unittest.TestCase):
         self.assertEqual(audit_id, "audit-000001")
         self.assertEqual(sink.events, [event])
 
+    def test_in_memory_audit_sink_retains_a_snapshot_of_recorded_details(self):
+        event = AuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={
+                "current_agent": "Policy Agent",
+                "metadata": {"request_id": "request-1"},
+            },
+        )
+        sink = InMemoryAuditSink()
+
+        sink.record(event)
+        event.details["metadata"]["access_token"] = "must-not-be-retained"
+        event.details["message"] = "raw customer message"
+
+        self.assertEqual(
+            sink.events[0].details,
+            {
+                "current_agent": "Policy Agent",
+                "metadata": {"request_id": "request-1"},
+            },
+        )
+
     def test_jsonl_audit_sink_persists_sanitized_event(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "audit.jsonl"

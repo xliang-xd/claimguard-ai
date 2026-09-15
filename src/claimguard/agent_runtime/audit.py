@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
@@ -52,7 +53,7 @@ class InMemoryAuditSink:
 
     def record(self, event: AuditEvent) -> str:
         _validate_audit_details(event.details)
-        self.events.append(event)
+        self.events.append(deepcopy(event))
         return f"audit-{len(self.events):06d}"
 
 
