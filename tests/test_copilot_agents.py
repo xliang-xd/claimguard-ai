@@ -3,6 +3,9 @@ import sys
 import unittest
 from unittest.mock import MagicMock
 
+from agents import AgentOutputSchema, custom_span, trace
+from agents.exceptions import ModelBehaviorError
+from agents.run import get_output_schema
 from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -98,6 +101,36 @@ class CopilotAgentsTest(unittest.TestCase):
     def test_output_contract_rejects_unknown_status(self):
         with self.assertRaises(ValidationError):
             CopilotAgentOutput(status="unknown", draft="")
+
+    def test_configured_agent_output_schema_enforces_state_contract_for_json(self):
+        agents = build_copilot_agents(
+            agent_settings(),
+            MagicMock(name="policy_search_tool"),
+        )
+        output_schema = get_output_schema(agents.router)
+
+        self.assertIsInstance(output_schema, AgentOutputSchema)
+
+        invalid_payloads = [
+            '{"status": "human_takeover", "draft": "客服草稿：请参考条款"}',
+            '{"status": "draft_ready", "draft": "请参考条款"}',
+        ]
+
+        with trace("test", disabled=True):
+            with custom_span("output_schema_validation"):
+                for payload in invalid_payloads:
+                    with self.subTest(payload=payload), self.assertRaises(
+                        ModelBehaviorError
+                    ):
+                        output_schema.validate_json(payload)
+
+                output = output_schema.validate_json(
+                    '{"status": "draft_ready", "draft": "客服草稿：请参考条款"}'
+                )
+
+        self.assertIsInstance(output, CopilotAgentOutput)
+        self.assertEqual(output.status, "draft_ready")
+        self.assertEqual(output.draft, "客服草稿：请参考条款")
 
 
 if __name__ == "__main__":
