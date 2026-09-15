@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
@@ -15,7 +16,15 @@ _SENSITIVE_FIELD_FRAGMENTS = (
     "token",
     "secret",
 )
-_RAW_MESSAGE_FIELDS = ("input_items", "message")
+_RAW_MESSAGE_FIELDS = {
+    "history",
+    "messages",
+    "conversation",
+    "transcript",
+    "input_items",
+    "message",
+    "content",
+}
 
 
 @dataclass(frozen=True)
@@ -27,6 +36,9 @@ class AuditEvent:
     details: dict[str, object]
 
     def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
         _validate_audit_details(self.details)
 
 
@@ -39,6 +51,7 @@ class InMemoryAuditSink:
         self.events: list[AuditEvent] = []
 
     def record(self, event: AuditEvent) -> str:
+        event.validate()
         self.events.append(event)
         return f"audit-{len(self.events):06d}"
 
@@ -48,6 +61,7 @@ class JsonlAuditSink:
         self._path = path
 
     def record(self, event: AuditEvent) -> str:
+        event.validate()
         audit_id = f"audit-{uuid4().hex}"
         self._path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -61,7 +75,12 @@ class JsonlAuditSink:
 
 
 def _validate_audit_details(value: object) -> None:
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
+        normalized_keys = {
+            key.casefold() for key in value if isinstance(key, str)
+        }
+        if {"role", "content"}.issubset(normalized_keys):
+            raise ValueError("raw customer message details are not allowed")
         for key, nested_value in value.items():
             _validate_audit_key(key)
             _validate_audit_details(nested_value)
@@ -76,5 +95,5 @@ def _validate_audit_key(key: object) -> None:
     normalized_key = key.casefold()
     if any(fragment in normalized_key for fragment in _SENSITIVE_FIELD_FRAGMENTS):
         raise ValueError("sensitive audit field is not allowed")
-    if any(fragment in normalized_key for fragment in _RAW_MESSAGE_FIELDS):
+    if normalized_key in _RAW_MESSAGE_FIELDS or normalized_key.endswith("_message"):
         raise ValueError("raw customer message details are not allowed")

@@ -87,6 +87,117 @@ class AgentStateTest(unittest.TestCase):
                 details={"customer_message": "我的保单号是 P-12345"},
             )
 
+    def test_audit_event_rejects_raw_message_field_names_at_any_depth(self):
+        for field_name in (
+            "history",
+            "messages",
+            "conversation",
+            "transcript",
+            "input_items",
+            "message",
+            "content",
+        ):
+            with self.subTest(field_name=field_name):
+                with self.assertRaisesRegex(ValueError, "raw customer message"):
+                    AuditEvent(
+                        event_type="model_call",
+                        tenant_id="tenant-a",
+                        session_id="session-1",
+                        user_id="agent-7",
+                        details={"metadata": {field_name: "redacted"}},
+                    )
+
+    def test_audit_event_rejects_aliased_sdk_message_item(self):
+        with self.assertRaisesRegex(ValueError, "raw customer message"):
+            AuditEvent(
+                event_type="model_call",
+                tenant_id="tenant-a",
+                session_id="session-1",
+                user_id="agent-7",
+                details={
+                    "metadata": {
+                        "previous_turn": {
+                            "role": "user",
+                            "content": "我的保单号是 P-12345",
+                        }
+                    }
+                },
+            )
+
+    def test_in_memory_audit_sink_rejects_mutated_credential_details(self):
+        event = AuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"access_token": "redacted"}
+        sink = InMemoryAuditSink()
+
+        with self.assertRaisesRegex(ValueError, "sensitive audit field"):
+            sink.record(event)
+
+        self.assertEqual(sink.events, [])
+
+    def test_jsonl_audit_sink_rejects_mutated_credential_details(self):
+        event = AuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {"access_token": "redacted"}
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "audit.jsonl"
+            sink = JsonlAuditSink(path)
+
+            with self.assertRaisesRegex(ValueError, "sensitive audit field"):
+                sink.record(event)
+
+            self.assertFalse(path.exists())
+
+    def test_in_memory_audit_sink_rejects_mutated_aliased_sdk_message_item(self):
+        event = AuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {
+            "previous_turn": {"role": "user", "content": "我的保单号是 P-12345"}
+        }
+        sink = InMemoryAuditSink()
+
+        with self.assertRaisesRegex(ValueError, "raw customer message"):
+            sink.record(event)
+
+        self.assertEqual(sink.events, [])
+
+    def test_jsonl_audit_sink_rejects_mutated_aliased_sdk_message_item(self):
+        event = AuditEvent(
+            event_type="run_completed",
+            tenant_id="tenant-a",
+            session_id="session-1",
+            user_id="agent-7",
+            details={"current_agent": "Policy Agent"},
+        )
+        event.details["metadata"] = {
+            "previous_turn": {"role": "user", "content": "我的保单号是 P-12345"}
+        }
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "audit.jsonl"
+            sink = JsonlAuditSink(path)
+
+            with self.assertRaisesRegex(ValueError, "raw customer message"):
+                sink.record(event)
+
+            self.assertFalse(path.exists())
+
     def test_in_memory_audit_sink_assigns_sequential_audit_ids(self):
         sink = InMemoryAuditSink()
         event = AuditEvent(
