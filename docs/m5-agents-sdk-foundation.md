@@ -1,6 +1,6 @@
 # M5：Agents SDK 运行时基础
 
-`v0.5.0` 交付最小可运行的客服 Copilot 基础。当前仅启用 `Router -> Policy Handoff`：Router 识别保单、保障责任、等待期和免责等条款解释意图，并只可转交给 Policy Agent。Policy Agent 必须先调用 Policy Tool 检索条款；证据不足时返回 `human_takeover`，证据充分时才输出以“客服草稿：”开头的 `draft_ready`。
+`v0.5.0` 交付最小可运行的客服 Copilot 基础。当前仅启用 `Router -> Policy Handoff`：Router 识别保单、保障责任、等待期和免责等条款解释意图，并只可转交给 Policy Agent。Policy Agent 的当前指令要求先调用 Policy Tool 检索条款，并仅据返回的条款证据起草；证据不足时应返回 `human_takeover`，证据充分时才输出以“客服草稿：”开头的 `draft_ready`。这是当前 Agent 指令和工具配置的行为，不是 Runtime 强制的不变量；Runtime 对实际工具调用及草稿与工具证据绑定的验证留待后续里程碑。
 
 Claims、Complaint、审批、任何副作用工具、完整 Compliance Guard、Reranking 和 QA Citation Judge 仍未启用。现有 QA CLI 保持独立，默认离线，且 QA JSON 报告契约不变。
 
@@ -36,7 +36,11 @@ PYTHONPATH=src python3 -m claimguard.copilot_cli \
   "宠物投保后第二天就生病了，为什么不赔？"
 ```
 
-成功输出是 JSON，其中 `current_agent` 为 `Policy Agent`，且 `draft` 以“客服草稿：”开头并只引用检索到的等待期条款。不要把输出中的任何本地配置值保存到文档、fixture 或提交信息。
+受控演示的期望输出是 JSON，其中 `current_agent` 为 `Policy Agent`，且 `draft` 以“客服草稿：”开头。草稿仅依据检索条款是当前 Policy Agent 指令与工具配置的行为，而非 Runtime 层验证。不要把输出中的任何本地配置值保存到文档、fixture 或提交信息。
+
+## 证据说明
+
+当前实现将上述要求放在 `POLICY_INSTRUCTIONS`，并仅向 Policy Agent 配置 `policy_search_tool`；`CopilotRuntime._validated_output()` 只验证输出状态和草稿前缀，不检查工具调用或草稿与返回证据的对应关系。运行时工具证据验证因此明确后移。
 
 ## 验证分层
 

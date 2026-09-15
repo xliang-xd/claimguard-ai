@@ -73,7 +73,7 @@
     <text x="950" y="154" text-anchor="middle" class="version">v0.8.0</text>
     <text x="950" y="178" text-anchor="middle" class="label">审批与 Web</text>
     <text x="950" y="198" text-anchor="middle" class="small">副作用工具</text>
-    <text x="950" y="219" text-anchor="middle" class="small">RunState 恢复</text>
+    <text x="950" y="219" text-anchor="middle" class="small">ConversationState 恢复</text>
     <text x="950" y="355" text-anchor="middle" class="small">后续</text>
 
     <line x1="1150" y1="305" x2="1150" y2="235" stroke="#9ca3af" stroke-width="2"/>

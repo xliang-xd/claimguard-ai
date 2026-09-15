@@ -85,7 +85,7 @@ M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，�
 
 `v0.4.2` 冻结 OpenAI Agents SDK Copilot 架构：固定 Router 与 Policy、Claims、Complaint 的 Handoff 边界，保留 Qwen 默认模型、本地 Session 与本地审计，并明确 OpenAI 托管 tracing 默认关闭。
 
-`v0.5.0` 新增可运行的 Agents SDK 基础：Qwen Provider、Agents SDK Runner、`Router -> Policy Handoff`、仅检索条款的 Policy Tool、进程内 Session 恢复和本地 JSONL 审计。Policy Agent 只会根据检索条款起草以“客服草稿：”标记的回复；Claims、Complaint、审批和副作用工具仍未启用。完整操作步骤见 `docs/m5-agents-sdk-foundation.md`。
+`v0.5.0` 新增可运行的 Agents SDK 基础：Qwen Provider、Agents SDK Runner、`Router -> Policy Handoff`、仅检索条款的 Policy Tool、进程内 Session 恢复和本地 JSONL 审计。Policy Agent 当前通过其指令和配置的 Policy Tool，以检索到的条款起草以“客服草稿：”标记的回复；这不是 Runtime 强制的不变量。Runtime 对工具调用及草稿与工具证据绑定的验证留待后续里程碑。Claims、Complaint、审批和副作用工具仍未启用。完整操作步骤见 `docs/m5-agents-sdk-foundation.md`。
 
 ## 仓库结构
 
