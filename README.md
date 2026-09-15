@@ -11,7 +11,7 @@ ClaimGuard AI 是一个聚焦于保险文字服务的 GitHub 演示项目。不�
 
 ![ClaimGuard AI 架构图](docs/assets/architecture.svg)
 
-当前对外运行能力仍是 v0.4 QA：确定性 QA、可选的 RAG 依据检索，以及面向已完成中文对话的可选语义质检。只有当操作者显式传入 `--llm` 时，语义裁判才会执行一次；默认 CLI 保持离线。`v0.4.2` 只记录 Copilot 架构设计，没有启用 Copilot 运行代码，也不改变 QA 报告契约。
+当前对外运行能力包括 v0.4 QA 和 v0.5.0 的最小 Copilot：确定性 QA、可选的 RAG 依据检索、面向已完成中文对话的可选语义质检，以及固定的 `Router -> Policy Handoff`。只有当操作者显式传入 `--llm` 时，QA 语义裁判才会执行一次；旧 QA CLI 默认保持离线，QA 报告契约不变。
 
 ## V1 产品
 
@@ -56,20 +56,18 @@ QA 工作流审查已完成对话。
 
 ## Copilot 技术方向
 
-Copilot 将采用 OpenAI Agents SDK for Python，编排采用固定的 `Router -> Policy / Claims / Complaint Handoff`：
+Copilot 使用 OpenAI Agents SDK for Python。v0.5.0 仅启用固定的 `Router -> Policy Handoff`：
 
 ```text
 Router
   -> Policy Agent
-  -> Claims Agent
-  -> Complaint Agent
 ```
 
-所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。QA Agent 保持独立，继续审查已完成对话。`v0.5.0` 才会启用最小 `Router -> Policy Handoff`；Claims、Complaint、审批和 Web/API 工作台继续按路线图后移。
+所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。QA Agent 保持独立，继续审查已完成对话。Claims、Complaint、审批和副作用工具以及 Web/API 工作台继续按路线图后移。
 
 ## 当前里程碑
 
-当前软件包版本：`0.4.2`。
+当前软件包版本：`0.5.0`。
 
 M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，而非 fixture 中的 `expected_risks` 字段。在 LLM 行为仍处于开发阶段时，该字段继续作为测试预期数据。
 
@@ -85,7 +83,9 @@ M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，�
 
 `v0.4.1` 将解释性文档和技术图本地化为中文，不改变已交付功能范围。
 
-`v0.4.2` 冻结 OpenAI Agents SDK Copilot 架构：固定 Router 与 Policy、Claims、Complaint 的 Handoff 边界，保留 Qwen 默认模型、本地 Session 与本地审计，并明确 OpenAI 托管 tracing 默认关闭。此版本仍只运行 v0.4 QA，不包含 Copilot 运行时。
+`v0.4.2` 冻结 OpenAI Agents SDK Copilot 架构：固定 Router 与 Policy、Claims、Complaint 的 Handoff 边界，保留 Qwen 默认模型、本地 Session 与本地审计，并明确 OpenAI 托管 tracing 默认关闭。
+
+`v0.5.0` 新增可运行的 Agents SDK 基础：Qwen Provider、Agents SDK Runner、`Router -> Policy Handoff`、仅检索条款的 Policy Tool、进程内 Session 恢复和本地 JSONL 审计。Policy Agent 只会根据检索条款起草以“客服草稿：”标记的回复；Claims、Complaint、审批和副作用工具仍未启用。完整操作步骤见 `docs/m5-agents-sdk-foundation.md`。
 
 ## 仓库结构
 
@@ -136,6 +136,17 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-di
 生成的索引保存在 `.claimguard/petcare-plus-policy.json`。API Key 和生成的索引不会提交。当显式设置时，进程环境变量会覆盖 `.env` 中的同名值。
 
 支持的中文案例、索引生命周期、操作者命令和当前限制见 `docs/m3-rag-grounding.md`。
+
+使用现有本地 Qwen 配置创建索引后，可以运行一次受控 Copilot smoke。该命令会访问 Model Studio；索引和默认审计文件均位于被 Git 忽略的 `.claimguard/`。Copilot 的默认审计路径是 `.claimguard/audit.jsonl`，审计事件不记录原始客户消息或凭据。
+
+```bash
+PYTHONPATH=src python3 -m claimguard.copilot_cli \
+  --tenant-id demo-tenant --user-id agent-7 --session-id policy-demo-001 \
+  --index .claimguard/petcare-plus-policy.json \
+  "宠物投保后第二天就生病了，为什么不赔？"
+```
+
+`InMemorySessionStore` 只保证同一进程内的多轮恢复；持久 Session 会在后续里程碑实现。
 
 针对专用中文 fixture 运行语义质检：
 

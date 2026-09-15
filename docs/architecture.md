@@ -1,6 +1,6 @@
 # 架构
 
-ClaimGuard AI 当前对外运行能力仍是 v0.4 QA。确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。`v0.4.2` 是后续 Copilot 的文档检查点，只记录设计，没有启用 Copilot 运行代码。
+ClaimGuard AI 当前对外运行能力包括 v0.4 QA 和 v0.5.0 的最小 Copilot。确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。Copilot 已启用固定的 `Router -> Policy Handoff`，不会改变 QA 报告契约。
 
 ## 语义质检（当前）
 
@@ -30,9 +30,9 @@ ClaimGuard AI 当前对外运行能力仍是 v0.4 QA。确定性规则始终执�
 
 本地索引是位于 `.claimguard/` 下、供操作者使用且被忽略的产物。Embedding 客户端只在创建索引和有依据检索时创建；旧版 QA CLI 仍然完全离线，也不需要 Key。
 
-## Copilot 运行时设计（尚未启用）
+## Copilot 运行时（当前）
 
-Copilot 采用 OpenAI Agents SDK for Python。SDK 负责 Agent、固定 Handoff、Runner、interruptions 和 RunState；模型服务通过独立 Qwen Provider 接入中国大陆地域的 Model Studio。所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。
+Copilot 采用 OpenAI Agents SDK for Python。v0.5.0 已启用 Agents SDK Runner、Qwen Provider、Router、Policy Agent 和 Policy Tool；模型服务通过独立 Qwen Provider 接入中国大陆地域的 Model Studio。所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。
 
 ```text
 Web / CLI
@@ -40,21 +40,19 @@ Web / CLI
      -> Qwen Provider
      -> Router
         -> Policy Agent
-        -> Claims Agent
-        -> Complaint Agent
+           -> Policy Tool（检索条款）
 ```
 
-第一版按单组织内部系统运行；每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。应用保存本地 Session 和 AuditEvent。
+第一版按单组织内部系统运行；每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。应用通过 `InMemorySessionStore` 保存同一进程内的多轮状态；持久 Session 与跨进程恢复仍未实现。默认 JSONL 审计路径是 `.claimguard/audit.jsonl`。
 
 SessionStore 的 `exclusive_session` 是可选能力。只提供 `load` 和 `save` 的旧 Store 仍可运行，Runtime 会在当前实例和当前事件循环内按会话串行化；该兼容回退不能协调多个 Runtime 实例或事件循环共享同一 Store 的 `load-run-save` 操作。需要这一并发保证的 Store 必须实现 `exclusive_session`。
 
-OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。API Key 只从被忽略的 `.env` 或进程环境读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
+OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。审计事件拒绝原始客户消息和凭据字段。API Key 只从被忽略的 `.env` 或进程环境读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
 
 ## 版本边界
 
-- `v0.4.2`：只记录 Agents SDK、Handoff、Qwen Provider、本地 Session 与审计设计。
-- `v0.5.0`：才启用最小 `Router -> Policy Handoff`。
-- Claims、Complaint、Citation Judge、Reranking、持久化和 Web/API 工作台继续后移。
+- `v0.5.0`：已启用 Agents SDK Runner、Qwen Provider、`Router -> Policy Handoff`、Policy Tool、进程内 Session 和本地审计。
+- Claims、Complaint、Compliance Guard 的完整能力、Citation Judge、Reranking、持久化 Session、审批、副作用工具和 Web/API 工作台继续后移。
 
 现有 QA CLI 暂不迁移到 Agents SDK。检索证据只用于定位选中的条款，不构成引用准确性判断。
 
@@ -67,6 +65,6 @@ src/claimguard/              应用软件包
 tests/                       自动化检查
 ```
 
-v0.3 操作说明见 `docs/m3-rag-grounding.md`，v0.4 语义操作契约见 `docs/m4-semantic-qa.md`。
+v0.3 操作说明见 `docs/m3-rag-grounding.md`，v0.4 语义操作契约见 `docs/m4-semantic-qa.md`，v0.5 Copilot 操作说明见 `docs/m5-agents-sdk-foundation.md`。
 
 维护中的 Agent 拓扑、国产模型默认配置和更新策略见 `docs/agent-orchestration.md`。

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 620" width="1500" height="620" role="img" aria-labelledby="title desc">
-  <title id="title">ClaimGuard AI v0.4.2 至 v1.0.0 路线图</title>
-  <desc id="desc">v0.4.2 架构准备是当前检查点，v0.5.0 Agents SDK 基础是下一项，后续依次为 v0.6.0 至 v1.0.0。</desc>
+  <title id="title">ClaimGuard AI v0.5.0 至 v1.0.0 路线图</title>
+  <desc id="desc">v0.5.0 Agents SDK 基础是当前能力，v0.6.0 Reranking 和 Citation Judge 是下一项，后续依次为 v0.7.0 至 v1.0.0。</desc>
   <style>
     text { font-family: 'Hiragino Sans GB', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; }
     .title { fill: #111827; font-size: 27px; font-weight: 700; }
@@ -16,7 +16,7 @@
   </defs>
   <rect width="1500" height="620" fill="#ffffff"/>
   <text x="65" y="55" class="title">ClaimGuard AI 路线图</text>
-  <text x="65" y="82" class="subtitle">v0.4.2 冻结架构设计；从 v0.5.0 开始逐步交付 Agents SDK Copilot 运行能力。</text>
+  <text x="65" y="82" class="subtitle">v0.5.0 已交付最小 Agents SDK Copilot；下一项是 v0.6.0 的 Reranking + Citation Judge。</text>
 
   <line x1="115" y1="305" x2="134" y2="305" stroke="#2563eb" stroke-width="3"/>
   <line x1="166" y1="305" x2="337" y2="305" stroke="#2563eb" stroke-width="3"/>
@@ -36,26 +36,27 @@
     <text x="150" y="198" text-anchor="middle" class="label">架构准备</text>
     <text x="150" y="219" text-anchor="middle" class="small">仅设计，不启用运行时</text>
     <rect x="91" y="340" width="118" height="28" rx="6" fill="#ecfdf5" stroke="#10b981"/>
-    <text x="150" y="359" text-anchor="middle" class="current">当前</text>
+    <text x="150" y="359" text-anchor="middle" class="current">已完成</text>
 
-    <line x1="350" y1="305" x2="350" y2="235" stroke="#fb923c" stroke-width="2.5"/>
-    <circle cx="350" cy="305" r="14" fill="#fb923c" stroke="#9a3412" stroke-width="2"/>
-    <rect x="265" y="125" width="170" height="110" rx="8" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+    <line x1="350" y1="305" x2="350" y2="235" stroke="#10b981" stroke-width="2.5"/>
+    <circle cx="350" cy="305" r="14" fill="#10b981" stroke="#065f46" stroke-width="2"/>
+    <rect x="265" y="125" width="170" height="110" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
     <text x="350" y="154" text-anchor="middle" class="version">v0.5.0</text>
     <text x="350" y="178" text-anchor="middle" class="label">Agents SDK 基础</text>
     <text x="350" y="198" text-anchor="middle" class="small">Qwen Provider</text>
     <text x="350" y="219" text-anchor="middle" class="small">Router -&gt; Policy</text>
-    <rect x="291" y="340" width="118" height="28" rx="6" fill="#fff7ed" stroke="#fb923c"/>
-    <text x="350" y="359" text-anchor="middle" class="next">下一项</text>
+    <rect x="291" y="340" width="118" height="28" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+    <text x="350" y="359" text-anchor="middle" class="current">当前</text>
 
-    <line x1="550" y1="305" x2="550" y2="235" stroke="#9ca3af" stroke-width="2"/>
-    <circle cx="550" cy="305" r="11" fill="#9ca3af"/>
-    <rect x="465" y="125" width="170" height="110" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <line x1="550" y1="305" x2="550" y2="235" stroke="#fb923c" stroke-width="2.5"/>
+    <circle cx="550" cy="305" r="14" fill="#fb923c" stroke="#9a3412" stroke-width="2"/>
+    <rect x="465" y="125" width="170" height="110" rx="8" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
     <text x="550" y="154" text-anchor="middle" class="version">v0.6.0</text>
     <text x="550" y="178" text-anchor="middle" class="label">Reranking</text>
     <text x="550" y="198" text-anchor="middle" class="label">Citation Judge</text>
     <text x="550" y="219" text-anchor="middle" class="small">检索评测集</text>
-    <text x="550" y="355" text-anchor="middle" class="small">后续</text>
+    <rect x="491" y="340" width="118" height="28" rx="6" fill="#fff7ed" stroke="#fb923c"/>
+    <text x="550" y="359" text-anchor="middle" class="next">下一项</text>
 
     <line x1="750" y1="305" x2="750" y2="235" stroke="#9ca3af" stroke-width="2"/>
     <circle cx="750" cy="305" r="11" fill="#9ca3af"/>
@@ -95,8 +96,8 @@
   </g>
 
   <rect x="80" y="420" width="1340" height="92" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
-  <text x="105" y="449" class="label">当前能力边界：v0.4 QA</text>
-  <text x="105" y="472" class="small">v0.4.2 不启用 Copilot 运行代码；所有模型仍默认使用 Qwen；OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启。</text>
-  <text x="105" y="494" class="small">v0.5.0 才启用最小 Router -&gt; Policy Handoff；Claims、Complaint、审批与 Web 工作台按后续版本交付。</text>
+  <text x="105" y="449" class="label">当前能力边界：v0.4 QA + v0.5 Copilot</text>
+  <text x="105" y="472" class="small">v0.5.0 已启用 Qwen Provider、Agents SDK Runner 与最小 Router -&gt; Policy Handoff；OpenAI 托管 tracing 默认关闭。</text>
+  <text x="105" y="494" class="small">Claims、Complaint、审批与副作用工具继续后移；v0.6.0 的下一项是 Reranking + Citation Judge。</text>
   <text x="65" y="570" class="small">版本策略：补丁版本可冻结设计；能力里程碑使用 v0.Y.0；只有独立可交付的企业级演示才使用 v1.0.0。</text>
 </svg>
