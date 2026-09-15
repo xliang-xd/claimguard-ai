@@ -1,0 +1,91 @@
+from pathlib import Path
+import sys
+import unittest
+from unittest.mock import MagicMock
+
+from pydantic import ValidationError
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from claimguard.agent_runtime.agents import (
+    CopilotAgentOutput,
+    build_copilot_agents,
+)
+from claimguard.agent_runtime.settings import AgentRuntimeSettings
+
+
+def agent_settings() -> AgentRuntimeSettings:
+    return AgentRuntimeSettings(
+        api_key="test-key",
+        base_url="https://workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+        router_model="qwen3.8-flash",
+        policy_model="qwen3.7-plus",
+        openai_tracing_enabled=False,
+    )
+
+
+class CopilotAgentsTest(unittest.TestCase):
+    def test_router_can_only_handoff_to_policy_in_v0_5(self):
+        tool = MagicMock(name="policy_search_tool")
+
+        agents = build_copilot_agents(agent_settings(), tool)
+
+        self.assertEqual(agents.router.name, "Copilot Router Agent")
+        self.assertEqual(agents.policy.name, "Policy Agent")
+        self.assertEqual(
+            [handoff.agent_name for handoff in agents.router.handoffs],
+            ["Policy Agent"],
+        )
+        self.assertEqual(agents.router.tools, [])
+        self.assertEqual(agents.policy.tools, [agents.policy_search_tool])
+        self.assertEqual(agents.policy.handoffs, [])
+        self.assertEqual(
+            agents.by_name,
+            {
+                "Copilot Router Agent": agents.router,
+                "Policy Agent": agents.policy,
+            },
+        )
+        self.assertIs(agents.router.output_type, CopilotAgentOutput)
+        self.assertIs(agents.policy.output_type, CopilotAgentOutput)
+        tool.assert_not_called()
+
+    def test_models_are_explicit_per_agent(self):
+        agents = build_copilot_agents(
+            agent_settings(),
+            MagicMock(name="policy_search_tool"),
+        )
+
+        self.assertEqual(agents.router.model, "qwen3.8-flash")
+        self.assertEqual(agents.policy.model, "qwen3.7-plus")
+
+    def test_instructions_require_evidence_based_safe_outputs(self):
+        agents = build_copilot_agents(
+            agent_settings(),
+            MagicMock(name="policy_search_tool"),
+        )
+
+        self.assertIn("Policy Agent", agents.router.instructions)
+        self.assertIn('status="human_takeover"', agents.router.instructions)
+        self.assertIn('draft=""', agents.router.instructions)
+        self.assertIn("先调用检索工具", agents.policy.instructions)
+        self.assertIn("只根据检索工具返回的条款证据", agents.policy.instructions)
+        self.assertIn('status="human_takeover"', agents.policy.instructions)
+        self.assertIn('draft=""', agents.policy.instructions)
+        self.assertIn('status="draft_ready"', agents.policy.instructions)
+        self.assertIn("客服草稿", agents.policy.instructions)
+
+    def test_output_contract_only_allows_typed_statuses_and_draft(self):
+        draft = CopilotAgentOutput(status="draft_ready", draft="客服草稿：请参考条款")
+        takeover = CopilotAgentOutput(status="human_takeover", draft="")
+
+        self.assertEqual(draft.status, "draft_ready")
+        self.assertEqual(draft.draft, "客服草稿：请参考条款")
+        self.assertEqual(takeover.status, "human_takeover")
+        self.assertEqual(takeover.draft, "")
+        with self.assertRaises(ValidationError):
+            CopilotAgentOutput(status="unknown", draft="")
+
+
+if __name__ == "__main__":
+    unittest.main()
