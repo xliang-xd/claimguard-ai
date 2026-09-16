@@ -102,6 +102,19 @@ class RerankClausesTest(unittest.TestCase):
                 with self.assertRaisesRegex(RerankingError, "重排分数"):
                     rerank_clauses("等待期", candidates(), StaticReranker([0.9, score]))
 
+    def test_rerank_rejects_oversized_integer_scores(self):
+        oversized_score = 10**10000
+
+        with self.assertRaisesRegex(RerankingError, "重排分数"):
+            rerank_clauses("等待期", candidates(), StaticReranker([0.9, oversized_score]))
+
+        invalid_candidates = candidates()
+        invalid_candidates[0] = RetrievedClause(
+            clause=invalid_candidates[0].clause, score=oversized_score
+        )
+        with self.assertRaisesRegex(RerankingError, "召回分数"):
+            rerank_clauses("等待期", invalid_candidates, StaticReranker([0.9, 0.8]))
+
     def test_rerank_rejects_boolean_and_non_finite_retrieval_scores(self):
         for score in (True, float("nan"), float("inf"), float("-inf")):
             with self.subTest(score=score):

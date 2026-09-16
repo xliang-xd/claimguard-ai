@@ -42,6 +42,17 @@ class OneShotTransport:
         return OneShotResponse(self.payload)
 
 
+class ReadFailureResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def read(self):
+        raise RuntimeError("客户私密问题：条款私密正文")
+
+
 class QwenRerankerTest(unittest.TestCase):
     def test_qwen_reranker_posts_model_query_and_documents(self):
         transport = OneShotTransport(self._response([(0, 0.8)]))
@@ -124,6 +135,17 @@ class QwenRerankerTest(unittest.TestCase):
         error_text = str(context.exception)
         self.assertEqual(error_text, "Reranking response was invalid")
         self.assertNotIn("offline-reranking-credential", error_text)
+        self.assertNotIn("客户私密问题", error_text)
+        self.assertNotIn("条款私密正文", error_text)
+
+    def test_qwen_reranker_hides_details_when_response_read_fails(self):
+        client = self._client(lambda request, timeout: ReadFailureResponse())
+
+        with self.assertRaises(RerankingError) as context:
+            client.rerank("客户私密问题", ["条款私密正文"])
+
+        error_text = str(context.exception)
+        self.assertEqual(error_text, "Reranking response was invalid")
         self.assertNotIn("客户私密问题", error_text)
         self.assertNotIn("条款私密正文", error_text)
 

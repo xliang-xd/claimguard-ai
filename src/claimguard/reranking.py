@@ -65,11 +65,16 @@ class QwenReranker:
             "documents": documents,
         }
         try:
-            with self._send(payload) as response:
-                response_payload = json.loads(response.read().decode("utf-8"))
+            response = self._send(payload)
         except (error.HTTPError, error.URLError, OSError):
             raise RerankingError("Reranking request failed") from None
-        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        except Exception:
+            raise RerankingError("Reranking request failed") from None
+
+        try:
+            with response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+        except Exception:
             raise RerankingError("Reranking response was invalid") from None
 
         return _parse_reranking_response(response_payload, len(documents))
@@ -132,7 +137,12 @@ def _validate_rerank_scores(scores: object, expected_count: int) -> None:
 
 
 def _is_finite_number(value: object) -> bool:
-    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def _read_non_empty_environment_value(name: str, default: str) -> str:
