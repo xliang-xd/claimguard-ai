@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
+from jsonschema import ValidationError, validate
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -255,9 +256,97 @@ class QwenCitationJudgeTest(unittest.TestCase):
             schema["properties"]["reason_code"]["enum"],
             ["citation_supported", "citation_unsupported", "insufficient_evidence"],
         )
+        self.assertEqual(
+            schema["oneOf"],
+            [
+                {
+                    "properties": {
+                        "status": {"type": "string", "enum": ["supported"]},
+                        "reason_code": {
+                            "type": "string",
+                            "enum": ["citation_supported"],
+                        },
+                    }
+                },
+                {
+                    "properties": {
+                        "status": {"type": "string", "enum": ["unsupported"]},
+                        "reason_code": {
+                            "type": "string",
+                            "enum": ["citation_unsupported"],
+                        },
+                    }
+                },
+                {
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["insufficient_evidence"],
+                        },
+                        "reason_code": {
+                            "type": "string",
+                            "enum": ["insufficient_evidence"],
+                        },
+                    }
+                },
+            ],
+        )
         self.assertIn(DRAFT, payload["messages"][1]["content"])
         self.assertIn(EVIDENCE_CONTENT, payload["messages"][1]["content"])
         self.assertIn("18", payload["messages"][1]["content"])
+
+    def test_strict_schema_rejects_mismatched_status_and_reason_code(self):
+        transport = OneShotTransport(self._response("supported", ["18"]))
+        judge = self._judge(transport)
+
+        judge.judge(DRAFT, evidence_records())
+
+        request, _ = transport.requests[0]
+        schema = json.loads(request.data.decode("utf-8"))["response_format"][
+            "json_schema"
+        ]["schema"]
+        valid_verdicts = (
+            {
+                "status": "supported",
+                "citations": ["18"],
+                "reason_code": "citation_supported",
+            },
+            {
+                "status": "unsupported",
+                "citations": [],
+                "reason_code": "citation_unsupported",
+            },
+            {
+                "status": "insufficient_evidence",
+                "citations": [],
+                "reason_code": "insufficient_evidence",
+            },
+        )
+        mismatched_verdicts = (
+            {
+                "status": "supported",
+                "citations": ["18"],
+                "reason_code": "citation_unsupported",
+            },
+            {
+                "status": "unsupported",
+                "citations": [],
+                "reason_code": "insufficient_evidence",
+            },
+            {
+                "status": "insufficient_evidence",
+                "citations": [],
+                "reason_code": "citation_supported",
+            },
+        )
+
+        for verdict in valid_verdicts:
+            with self.subTest(valid_verdict=verdict):
+                validate(verdict, schema)
+        for verdict in mismatched_verdicts:
+            with self.subTest(mismatched_verdict=verdict):
+                with self.assertRaises(ValidationError):
+                    validate(verdict, schema)
 
     def test_rejects_a_non_qwen_configured_model_before_request(self):
         transport = OneShotTransport(self._response("supported", ["18"]))

@@ -217,4 +217,13 @@ def _response_schema() -> dict[str, object]:
             "citations": {"type": "array", "items": {"type": "string"}},
             "reason_code": {"type": "string", "enum": list(_REASON_CODES)},
         },
+        "oneOf": [
+            {
+                "properties": {
+                    "status": {"type": "string", "enum": [status]},
+                    "reason_code": {"type": "string", "enum": [reason_code]},
+                }
+            }
+            for status, reason_code in _REASON_CODES_BY_STATUS.items()
+        ],
     }
