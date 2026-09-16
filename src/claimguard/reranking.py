@@ -14,6 +14,7 @@ from claimguard.knowledge import PolicyClause, RetrievedClause
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen3-rerank"
 REQUEST_TIMEOUT_SECONDS = 30
+_RESPONSE_PAYLOAD_MISSING = object()
 
 
 class RerankingError(ValueError):
@@ -71,11 +72,14 @@ class QwenReranker:
         except Exception:
             raise RerankingError("Reranking request failed") from None
 
+        response_payload: object = _RESPONSE_PAYLOAD_MISSING
         try:
             with response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except Exception:
             raise RerankingError("Reranking response was invalid") from None
+        if response_payload is _RESPONSE_PAYLOAD_MISSING:
+            raise RerankingError("Reranking response was invalid")
 
         return _parse_reranking_response(response_payload, len(documents))
 
