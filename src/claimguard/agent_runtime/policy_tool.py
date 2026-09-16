@@ -6,8 +6,10 @@ from typing import Literal
 from agents import FunctionTool, RunContextWrapper, function_tool
 
 from claimguard.agent_runtime.audit import AuditEvent
+from claimguard.agent_runtime.evidence import EvidenceRecord
 from claimguard.agent_runtime.state import CopilotContext
 from claimguard.knowledge import retrieve_clauses
+from claimguard.reranking import rerank_clauses
 
 
 @dataclass(frozen=True)
@@ -38,17 +40,32 @@ def search_policy_clauses(
         context.embedding_client,
         top_k=top_k,
     )
+    reranked = rerank_clauses(query, retrieved, context.reranker)
+    selected = [item for item in reranked if item.rerank_score >= minimum_score]
     evidence = [
         PolicyClauseEvidence(
             id=item.clause.id,
             title=item.clause.title,
             content=item.clause.content,
             source_path=item.clause.source_path,
-            score=item.score,
+            score=item.rerank_score,
         )
-        for item in retrieved
-        if item.score >= minimum_score
+        for item in selected
     ]
+    context.evidence_ledger.record(
+        [
+            EvidenceRecord(
+                clause_id=item.clause.id,
+                title=item.clause.title,
+                content=item.clause.content,
+                source_path=item.clause.source_path,
+                retrieval_score=item.retrieval_score,
+                rerank_score=item.rerank_score,
+            )
+            for item in selected
+        ]
+    )
+    rerank_scores = [item.rerank_score for item in selected]
     audit_id = context.audit_sink.record(
         AuditEvent(
             event_type="policy_search",
@@ -59,6 +76,8 @@ def search_policy_clauses(
                 "query_length": len(query.strip()),
                 "clause_ids": [item.id for item in evidence],
                 "result_count": len(evidence),
+                "minimum_rerank_score": min(rerank_scores) if rerank_scores else None,
+                "maximum_rerank_score": max(rerank_scores) if rerank_scores else None,
             },
         )
     )

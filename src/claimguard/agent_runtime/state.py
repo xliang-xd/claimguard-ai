@@ -7,8 +7,10 @@ from threading import Lock
 from typing import AsyncContextManager, Protocol
 
 from claimguard.agent_runtime.audit import AuditSink
+from claimguard.agent_runtime.evidence import EvidenceLedger
 from claimguard.embeddings import EmbeddingClient
 from claimguard.knowledge import KnowledgeIndex
+from claimguard.reranking import Reranker
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,8 @@ class CopilotContext:
     knowledge_index: KnowledgeIndex
     embedding_client: EmbeddingClient
     audit_sink: AuditSink
+    reranker: Reranker
+    evidence_ledger: EvidenceLedger
 
 
 @dataclass(frozen=True)

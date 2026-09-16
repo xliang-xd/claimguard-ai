@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from claimguard.agent_runtime.agents import CopilotAgentOutput
 from claimguard.agent_runtime.audit import InMemoryAuditSink
+from claimguard.agent_runtime.evidence import EvidenceLedger
 from claimguard.agent_runtime.runtime import CopilotRuntime, SDKAgentRunner
 from claimguard.agent_runtime.state import (
     ConversationState,
@@ -180,6 +181,8 @@ def make_context():
         knowledge_index=MagicMock(),
         embedding_client=MagicMock(),
         audit_sink=InMemoryAuditSink(),
+        reranker=MagicMock(),
+        evidence_ledger=EvidenceLedger(),
     )
 
 
@@ -228,6 +231,8 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
             knowledge_index=MagicMock(),
             embedding_client=MagicMock(),
             audit_sink=InMemoryAuditSink(),
+            reranker=MagicMock(),
+            evidence_ledger=EvidenceLedger(),
         )
         cold_context = CopilotContext(
             tenant_id="tenant-a",
@@ -236,6 +241,8 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
             knowledge_index=MagicMock(),
             embedding_client=MagicMock(),
             audit_sink=InMemoryAuditSink(),
+            reranker=MagicMock(),
+            evidence_ledger=EvidenceLedger(),
         )
         hot_turn = asyncio.create_task(runtime.run_turn(hot_context, "第一条热会话消息"))
         await runner.hot_turn_started.wait()
@@ -372,6 +379,8 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
             knowledge_index=context.knowledge_index,
             embedding_client=context.embedding_client,
             audit_sink=FailingCompletionAuditSink(),
+            reranker=context.reranker,
+            evidence_ledger=context.evidence_ledger,
         )
 
         result = await make_runtime(runner, store).run_turn(context, "新消息")
