@@ -103,7 +103,6 @@ class PolicyToolTest(unittest.TestCase):
         self.assertEqual(
             context.audit_sink.events[-1].details,
             {
-                "query_length": 12,
                 "clause_ids": ["18"],
                 "result_count": 1,
                 "minimum_rerank_score": 0.9,
@@ -121,7 +120,6 @@ class PolicyToolTest(unittest.TestCase):
         self.assertEqual(
             context.audit_sink.events[-1].details,
             {
-                "query_length": 4,
                 "clause_ids": [],
                 "result_count": 0,
                 "minimum_rerank_score": None,

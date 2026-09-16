@@ -73,7 +73,6 @@ def search_policy_clauses(
             session_id=context.session_id,
             user_id=context.user_id,
             details={
-                "query_length": len(query.strip()),
                 "clause_ids": [item.id for item in evidence],
                 "result_count": len(evidence),
                 "minimum_rerank_score": min(rerank_scores) if rerank_scores else None,
