@@ -15,6 +15,15 @@ DEFAULT_MODEL = "qwen3.7-plus"
 REQUEST_TIMEOUT_SECONDS = 30
 CitationStatus = Literal["supported", "unsupported", "insufficient_evidence"]
 _STATUSES = ("supported", "unsupported", "insufficient_evidence")
+CitationReasonCode = Literal[
+    "citation_supported", "citation_unsupported", "insufficient_evidence"
+]
+_REASON_CODES_BY_STATUS = {
+    "supported": "citation_supported",
+    "unsupported": "citation_unsupported",
+    "insufficient_evidence": "insufficient_evidence",
+}
+_REASON_CODES = tuple(_REASON_CODES_BY_STATUS.values())
 _VERDICT_FIELDS = ("status", "citations", "reason_code")
 _MISSING_RESPONSE = object()
 
@@ -27,7 +36,7 @@ class CitationJudgeError(ValueError):
 class CitationVerdict:
     status: CitationStatus
     citations: tuple[str, ...]
-    reason_code: str
+    reason_code: CitationReasonCode
 
 
 class CitationJudge(Protocol):
@@ -110,7 +119,9 @@ class QwenCitationJudge:
 _SYSTEM_INSTRUCTION = """You are a citation judge for insurance policy replies.
 Return exactly one JSON verdict. A supported verdict must cite one or more IDs from
 the supplied evidence only. Unsupported and insufficient_evidence verdicts must not
-contain citations. Use a concise stable reason_code and do not add fields."""
+contain citations. reason_code must be citation_supported for supported,
+citation_unsupported for unsupported, and insufficient_evidence for
+insufficient_evidence. Do not add fields."""
 
 
 def parse_citation_verdict(
@@ -127,7 +138,7 @@ def parse_citation_verdict(
         or not isinstance(citations, list)
         or any(not isinstance(citation, str) for citation in citations)
         or not isinstance(reason_code, str)
-        or not reason_code.strip()
+        or reason_code != _REASON_CODES_BY_STATUS.get(status)
     ):
         raise CitationJudgeError("Citation judge response was invalid")
 
@@ -204,6 +215,6 @@ def _response_schema() -> dict[str, object]:
         "properties": {
             "status": {"type": "string", "enum": list(_STATUSES)},
             "citations": {"type": "array", "items": {"type": "string"}},
-            "reason_code": {"type": "string"},
+            "reason_code": {"type": "string", "enum": list(_REASON_CODES)},
         },
     }

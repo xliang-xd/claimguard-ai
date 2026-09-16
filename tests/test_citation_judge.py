@@ -91,7 +91,7 @@ class CitationVerdictTest(unittest.TestCase):
             {
                 "status": "supported",
                 "citations": ["18"],
-                "reason_code": "coverage_explained",
+                "reason_code": "citation_supported",
             },
             evidence_records(),
         )
@@ -101,7 +101,7 @@ class CitationVerdictTest(unittest.TestCase):
             CitationVerdict(
                 status="supported",
                 citations=("18",),
-                reason_code="coverage_explained",
+                reason_code="citation_supported",
             ),
         )
 
@@ -110,12 +110,12 @@ class CitationVerdictTest(unittest.TestCase):
             {
                 "status": "supported",
                 "citations": ["999"],
-                "reason_code": "x",
+                "reason_code": "citation_supported",
             },
             {
                 "status": "supported",
                 "citations": [],
-                "reason_code": "x",
+                "reason_code": "citation_supported",
             },
         )
 
@@ -125,10 +125,14 @@ class CitationVerdictTest(unittest.TestCase):
                     parse_citation_verdict(payload, evidence_records())
 
     def test_non_supported_statuses_require_no_citations(self):
-        for status in ("unsupported", "insufficient_evidence"):
+        reason_codes = {
+            "unsupported": "citation_unsupported",
+            "insufficient_evidence": "insufficient_evidence",
+        }
+        for status, reason_code in reason_codes.items():
             with self.subTest(status=status):
                 verdict = parse_citation_verdict(
-                    {"status": status, "citations": [], "reason_code": "not_grounded"},
+                    {"status": status, "citations": [], "reason_code": reason_code},
                     evidence_records(),
                 )
 
@@ -136,13 +140,61 @@ class CitationVerdictTest(unittest.TestCase):
                 self.assertEqual(verdict.citations, ())
 
     def test_non_supported_statuses_reject_citations(self):
-        for status in ("unsupported", "insufficient_evidence"):
+        reason_codes = {
+            "unsupported": "citation_unsupported",
+            "insufficient_evidence": "insufficient_evidence",
+        }
+        for status, reason_code in reason_codes.items():
             with self.subTest(status=status):
                 with self.assertRaises(CitationJudgeError):
                     parse_citation_verdict(
-                        {"status": status, "citations": ["18"], "reason_code": "x"},
+                        {"status": status, "citations": ["18"], "reason_code": reason_code},
                         evidence_records(),
                     )
+
+    def test_rejects_arbitrary_reason_codes(self):
+        invalid_verdicts = (
+            {"status": "supported", "citations": ["18"], "reason_code": "x"},
+            {
+                "status": "unsupported",
+                "citations": [],
+                "reason_code": "not_grounded",
+            },
+            {
+                "status": "insufficient_evidence",
+                "citations": [],
+                "reason_code": "need_more_information",
+            },
+        )
+
+        for payload in invalid_verdicts:
+            with self.subTest(payload=payload):
+                with self.assertRaises(CitationJudgeError):
+                    parse_citation_verdict(payload, evidence_records())
+
+    def test_rejects_reason_codes_that_do_not_match_status(self):
+        invalid_verdicts = (
+            {
+                "status": "supported",
+                "citations": ["18"],
+                "reason_code": "citation_unsupported",
+            },
+            {
+                "status": "unsupported",
+                "citations": [],
+                "reason_code": "insufficient_evidence",
+            },
+            {
+                "status": "insufficient_evidence",
+                "citations": [],
+                "reason_code": "citation_supported",
+            },
+        )
+
+        for payload in invalid_verdicts:
+            with self.subTest(payload=payload):
+                with self.assertRaises(CitationJudgeError):
+                    parse_citation_verdict(payload, evidence_records())
 
     def test_rejects_non_strict_or_invalid_verdict_shape(self):
         invalid_verdicts = (
@@ -150,12 +202,12 @@ class CitationVerdictTest(unittest.TestCase):
             {
                 "status": "supported",
                 "citations": ["18"],
-                "reason_code": "x",
+                "reason_code": "citation_supported",
                 "extra": "not allowed",
             },
-            {"status": "unknown", "citations": [], "reason_code": "x"},
-            {"status": "supported", "citations": "18", "reason_code": "x"},
-            {"status": "supported", "citations": [18], "reason_code": "x"},
+            {"status": "unknown", "citations": [], "reason_code": "citation_supported"},
+            {"status": "supported", "citations": "18", "reason_code": "citation_supported"},
+            {"status": "supported", "citations": [18], "reason_code": "citation_supported"},
             {"status": "supported", "citations": ["18"], "reason_code": 1},
         )
 
@@ -177,7 +229,7 @@ class QwenCitationJudgeTest(unittest.TestCase):
             CitationVerdict(
                 status="supported",
                 citations=("18",),
-                reason_code="coverage_explained",
+                reason_code="citation_supported",
             ),
         )
         self.assertEqual(len(transport.requests), 1)
@@ -198,6 +250,10 @@ class QwenCitationJudgeTest(unittest.TestCase):
         self.assertEqual(
             schema["properties"]["status"]["enum"],
             ["supported", "unsupported", "insufficient_evidence"],
+        )
+        self.assertEqual(
+            schema["properties"]["reason_code"]["enum"],
+            ["citation_supported", "citation_unsupported", "insufficient_evidence"],
         )
         self.assertIn(DRAFT, payload["messages"][1]["content"])
         self.assertIn(EVIDENCE_CONTENT, payload["messages"][1]["content"])
@@ -293,7 +349,11 @@ class QwenCitationJudgeTest(unittest.TestCase):
         verdict = {
             "status": status,
             "citations": citations,
-            "reason_code": "coverage_explained",
+            "reason_code": {
+                "supported": "citation_supported",
+                "unsupported": "citation_unsupported",
+                "insufficient_evidence": "insufficient_evidence",
+            }[status],
         }
         return {"choices": [{"message": {"content": json.dumps(verdict)}}]}
 
