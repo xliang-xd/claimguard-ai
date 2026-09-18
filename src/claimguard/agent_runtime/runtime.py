@@ -145,6 +145,8 @@ class CopilotRuntime:
                     context,
                     "run_completed",
                     {
+                        "current_agent": last_agent_name,
+                        "evidence_count": len(evidence),
                         "citation_status": citation_status,
                         "citation_ids": citation_ids,
                     },

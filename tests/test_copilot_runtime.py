@@ -399,8 +399,16 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context.audit_sink.events[-1].event_type, "run_completed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"citation_status": "supported", "citation_ids": ("18",)},
+            {
+                "current_agent": "Policy Agent",
+                "evidence_count": 1,
+                "citation_status": "supported",
+                "citation_ids": ("18",),
+            },
         )
+        self.assertNotIn("draft", context.audit_sink.events[-1].details)
+        self.assertNotIn("content", context.audit_sink.events[-1].details)
+        self.assertNotIn("reason_code", context.audit_sink.events[-1].details)
 
     async def test_unsupported_verdict_does_not_save_or_deliver(self):
         store = InMemorySessionStore()
@@ -792,7 +800,12 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(store.load("tenant-a", "session-1").input_items, history)
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"citation_status": "supported", "citation_ids": ("18",)},
+            {
+                "current_agent": "Policy Agent",
+                "evidence_count": 1,
+                "citation_status": "supported",
+                "citation_ids": ("18",),
+            },
         )
 
     async def test_next_turn_resumes_at_last_agent(self):

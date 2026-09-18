@@ -51,6 +51,8 @@ class QwenReranker:
         self.model = _read_non_empty_environment_value(
             "CLAIMGUARD_RERANK_MODEL", DEFAULT_MODEL
         )
+        if not self.model.lower().startswith("qwen"):
+            raise RerankingError("Reranker model must be a Qwen model")
         self._send = _build_sender(
             api_key,
             base_url.rstrip("/"),

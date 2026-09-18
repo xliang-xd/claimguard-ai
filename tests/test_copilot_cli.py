@@ -50,7 +50,7 @@ class CopilotCLITest(unittest.TestCase):
             patch("claimguard.copilot_cli.JsonlAuditSink") as audit_sink,
             patch("claimguard.copilot_cli.QwenReranker") as qwen_reranker,
             patch("claimguard.copilot_cli.EvidenceLedger") as evidence_ledger,
-            patch("claimguard.copilot_cli.QwenCitationJudge", create=True) as qwen_judge,
+            patch("claimguard.copilot_cli.QwenCitationJudge") as qwen_judge,
             patch("claimguard.copilot_cli.build_search_policy_tool") as policy_tool,
             patch("claimguard.copilot_cli.build_copilot_agents") as build_agents,
             patch("claimguard.copilot_cli.CopilotRuntime", return_value=runtime) as copilot_runtime,

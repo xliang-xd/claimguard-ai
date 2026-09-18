@@ -84,15 +84,34 @@ class QwenRerankerTest(unittest.TestCase):
         transport = OneShotTransport(self._response([(0, 0.8)]))
         client = self._client(
             transport,
-            CLAIMGUARD_RERANK_MODEL="configured-reranker",
+            CLAIMGUARD_RERANK_MODEL="Qwen3.5-rerank",
             CLAIMGUARD_DASHSCOPE_BASE_URL="https://offline.example/qwen/",
         )
 
         client.rerank("等待期", ["条款一"])
 
         request, _ = transport.requests[0]
-        self.assertEqual(client.model, "configured-reranker")
+        self.assertEqual(client.model, "Qwen3.5-rerank")
         self.assertEqual(request.full_url, "https://offline.example/qwen/reranks")
+
+    def test_qwen_reranker_rejects_non_qwen_configured_model_before_request(self):
+        transport = OneShotTransport(self._response([(0, 0.8)]))
+
+        with patch.dict(
+            os.environ,
+            {
+                "DASHSCOPE_API_KEY": "offline-reranking-credential",
+                "CLAIMGUARD_RERANK_MODEL": "gpt-5-rerank",
+            },
+            clear=True,
+        ):
+            with patch("claimguard.reranking.load_project_environment"):
+                with self.assertRaisesRegex(
+                    RerankingError, "Reranker model must be a Qwen model"
+                ):
+                    QwenReranker(transport=transport)
+
+        self.assertEqual(transport.requests, [])
 
     def test_qwen_reranker_hides_authorization_on_http_error(self):
         def failing_transport(request, timeout):
