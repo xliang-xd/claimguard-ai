@@ -11,26 +11,72 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from claimguard.agent_runtime.agents import CopilotAgentOutput
 from claimguard.agent_runtime.audit import InMemoryAuditSink
-from claimguard.agent_runtime.evidence import EvidenceLedger
+from claimguard.agent_runtime.evidence import EvidenceLedger, EvidenceRecord
 from claimguard.agent_runtime.runtime import CopilotRuntime, SDKAgentRunner
 from claimguard.agent_runtime.state import (
     ConversationState,
     CopilotContext,
     InMemorySessionStore,
 )
+from claimguard.citation_judge import CitationVerdict
+
+
+def evidence_record(clause_id="18"):
+    return EvidenceRecord(
+        clause_id=clause_id,
+        title="等待期",
+        content="等待期为三十日。",
+        source_path="policy.md",
+        retrieval_score=0.9,
+        rerank_score=0.8,
+    )
+
+
+def supported(*citation_ids):
+    return CitationVerdict(
+        status="supported",
+        citations=tuple(citation_ids),
+        reason_code="citation_supported",
+    )
+
+
+def unsupported():
+    return CitationVerdict(
+        status="unsupported",
+        citations=(),
+        reason_code="citation_unsupported",
+    )
+
+
+class StaticJudge:
+    def __init__(self, verdict):
+        self.verdict = verdict
+        self.calls = []
+
+    def judge(self, draft, evidence):
+        self.calls.append((draft, evidence))
+        return self.verdict
+
+
+class FailingJudge:
+    def judge(self, draft, evidence):
+        raise RuntimeError("Authorization: Bearer judge-secret")
 
 
 class ScriptedRunner:
-    def __init__(self, last_agent_name, output, result_input_items=()):
+    def __init__(self, last_agent_name, output, result_input_items=(), record_evidence=True):
         self.last_agent_name = last_agent_name
         self.output = output
         self.result_input_items = result_input_items
         self.starting_agent_names = []
         self.inputs = []
+        self.record_evidence = record_evidence
 
     async def run(self, starting_agent, agent_input, *, context, run_config):
         self.starting_agent_names.append(starting_agent.name)
         self.inputs.append(agent_input)
+        if self.record_evidence:
+            context.evidence_ledger.record([evidence_record()])
         return ScriptedRunResult(
             self.last_agent_name,
             self.output,
@@ -61,6 +107,7 @@ class SerializedRunner:
 
     async def run(self, starting_agent, agent_input, *, context, run_config):
         self.inputs.append(agent_input)
+        context.evidence_ledger.record([evidence_record()])
         if len(self.inputs) == 1:
             self.first_turn_started.set()
             await self.release_first_turn.wait()
@@ -87,6 +134,7 @@ class ReusableSerializedRunner:
 
     async def run(self, starting_agent, agent_input, *, context, run_config):
         self.inputs.append(agent_input)
+        context.evidence_ledger.record([evidence_record()])
         if len(self.inputs) == self._pair_start + 1:
             self.first_turn_started.set()
             await self.release_first_turn.wait()
@@ -113,6 +161,7 @@ class HotAndColdSessionRunner:
             await self.release_hot_turn.wait()
         if context.session_id == "cold-session":
             self.cold_turn_started.set()
+        context.evidence_ledger.record([evidence_record()])
         input_items = (
             [{"role": "user", "content": agent_input}]
             if isinstance(agent_input, str)
@@ -139,6 +188,7 @@ class CrossLoopSerializedRunner:
         if is_first_turn:
             self.first_turn_started.set()
             await asyncio.to_thread(self.release_first_turn.wait)
+        context.evidence_ledger.record([evidence_record()])
         input_items = (
             [{"role": "user", "content": agent_input}]
             if isinstance(agent_input, str)
@@ -186,18 +236,21 @@ def make_context():
     )
 
 
-def make_runtime(runner, store):
+def make_runtime(runner, store, judge=...):
     router = SimpleNamespace(name="Copilot Router Agent")
     policy = SimpleNamespace(name="Policy Agent")
     agents = SimpleNamespace(
         router=router,
         by_name={router.name: router, policy.name: policy},
     )
+    if judge is ...:
+        judge = StaticJudge(supported("18"))
     return CopilotRuntime(
         agents=agents,
         run_config=MagicMock(),
         session_store=store,
         runner=runner,
+        citation_judge=judge,
     )
 
 
@@ -220,6 +273,221 @@ async def run_serialized_pair(
 
 
 class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_runtime_package_exports_citation_judge_contract(self):
+        from claimguard.agent_runtime import CitationJudge as PublicCitationJudge
+        from claimguard.agent_runtime import CitationVerdict as PublicCitationVerdict
+
+        from claimguard.citation_judge import CitationJudge, CitationVerdict
+
+        self.assertIs(PublicCitationJudge, CitationJudge)
+        self.assertIs(PublicCitationVerdict, CitationVerdict)
+
+    async def test_supported_verdict_saves_state_and_delivers_draft(self):
+        store = InMemorySessionStore()
+        context = make_context()
+        judge = StaticJudge(supported("18"))
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=judge,
+        ).run_turn(context, "等待期")
+
+        self.assertEqual(result.status, "draft_ready")
+        self.assertEqual(result.draft, "客服草稿：等待期说明")
+        self.assertIsNotNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(judge.calls[0][1], (evidence_record(),))
+        self.assertEqual(context.audit_sink.events[-1].event_type, "run_completed")
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {"citation_status": "supported", "citation_ids": ("18",)},
+        )
+
+    async def test_unsupported_verdict_does_not_save_or_deliver(self):
+        store = InMemorySessionStore()
+        context = make_context()
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=StaticJudge(unsupported()),
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "unsupported",
+                "citation_ids": (),
+                "failure_category": "unsupported_verdict",
+            },
+        )
+
+    async def test_empty_ledger_does_not_call_judge_or_save_state(self):
+        store = InMemorySessionStore()
+        context = make_context()
+        judge = StaticJudge(supported("18"))
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+                record_evidence=False,
+            ),
+            store,
+            judge=judge,
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertEqual(judge.calls, [])
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "no_evidence",
+            },
+        )
+
+    async def test_missing_judge_fails_closed_after_evidence_is_found(self):
+        store = InMemorySessionStore()
+        context = make_context()
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=None,
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "judge_unavailable",
+            },
+        )
+
+    async def test_judge_error_fails_closed_without_disclosing_exception(self):
+        store = InMemorySessionStore()
+        context = make_context()
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=FailingJudge(),
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertNotIn("judge-secret", repr(result))
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "judge_error",
+            },
+        )
+
+    async def test_unknown_judge_citation_is_not_audited_or_delivered(self):
+        store = InMemorySessionStore()
+        context = make_context()
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=StaticJudge(supported("unknown-clause")),
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "supported",
+                "citation_ids": (),
+                "failure_category": "unknown_citation",
+            },
+        )
+
+    async def test_failed_completion_audit_does_not_save_state_after_supported_verdict(self):
+        store = InMemorySessionStore()
+        context = make_context()
+        context = CopilotContext(
+            tenant_id=context.tenant_id,
+            session_id=context.session_id,
+            user_id=context.user_id,
+            knowledge_index=context.knowledge_index,
+            embedding_client=context.embedding_client,
+            audit_sink=FailingCompletionAuditSink(),
+            reranker=context.reranker,
+            evidence_ledger=context.evidence_ledger,
+        )
+
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=StaticJudge(supported("18")),
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertIsNone(store.load("tenant-a", "session-1"))
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": "supported",
+                "citation_ids": ("18",),
+                "failure_category": "audit_failed",
+            },
+        )
+
+    async def test_next_turn_clears_prior_ledger_evidence(self):
+        store = InMemorySessionStore()
+        context = make_context()
+        runner = ScriptedRunner(
+            last_agent_name="Policy Agent",
+            output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+        )
+        judge = StaticJudge(supported("18"))
+        runtime = make_runtime(runner, store, judge=judge)
+
+        first_result = await runtime.run_turn(context, "等待期")
+        state_after_first_turn = store.load("tenant-a", "session-1")
+        runner.record_evidence = False
+        context.evidence_ledger.record([evidence_record("stale-clause")])
+        second_result = await runtime.run_turn(context, "续问")
+
+        self.assertEqual(first_result.status, "draft_ready")
+        self.assertEqual((second_result.status, second_result.draft), ("human_takeover", ""))
+        self.assertEqual(context.evidence_ledger.snapshot(), ())
+        self.assertEqual(len(judge.calls), 1)
+        self.assertEqual(store.load("tenant-a", "session-1"), state_after_first_turn)
+
     async def test_hot_session_waiters_do_not_block_a_cold_session(self):
         asyncio.get_running_loop().set_default_executor(ThreadPoolExecutor(max_workers=1))
         runner = HotAndColdSessionRunner()
@@ -389,10 +657,14 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.draft, "")
         self.assertNotIn("test-secret", repr(result))
         self.assertEqual(store.load("tenant-a", "session-1"), prior_state)
-        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"outcome": "human_takeover"},
+            {
+                "citation_status": "supported",
+                "citation_ids": ("18",),
+                "failure_category": "audit_failed",
+            },
         )
 
     async def test_starts_at_router_then_persists_last_agent(self):
@@ -424,7 +696,7 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(store.load("tenant-a", "session-1").input_items, history)
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"current_agent": "Policy Agent", "outcome": "draft_ready"},
+            {"citation_status": "supported", "citation_ids": ("18",)},
         )
 
     async def test_next_turn_resumes_at_last_agent(self):
@@ -463,10 +735,14 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.status, "human_takeover")
         self.assertEqual(result.draft, "")
         self.assertNotIn("test-secret", repr(result))
-        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"outcome": "human_takeover"},
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "runtime_error",
+            },
         )
 
     async def test_structured_human_takeover_is_preserved(self):
@@ -502,10 +778,14 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.status, "human_takeover")
         self.assertEqual(result.draft, "")
         self.assertEqual(runner.starting_agent_names, [])
-        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"outcome": "human_takeover"},
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "runtime_error",
+            },
         )
 
     async def test_unknown_session_agent_fails_closed_without_disclosure(self):
@@ -530,10 +810,14 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.draft, "")
         self.assertNotIn("test-secret", repr(result))
         self.assertEqual(runner.starting_agent_names, [])
-        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"outcome": "human_takeover"},
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "runtime_error",
+            },
         )
 
     async def test_invalid_output_fails_closed_without_recording_tool_contents(self):
@@ -551,10 +835,14 @@ class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.status, "human_takeover")
         self.assertEqual(result.draft, "")
         self.assertNotIn("test-secret", repr(result))
-        self.assertEqual(context.audit_sink.events[-1].event_type, "run_failed")
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
         self.assertEqual(
             context.audit_sink.events[-1].details,
-            {"outcome": "human_takeover"},
+            {
+                "citation_status": "not_judged",
+                "citation_ids": (),
+                "failure_category": "invalid_output",
+            },
         )
 
 
