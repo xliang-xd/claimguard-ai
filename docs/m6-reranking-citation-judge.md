@@ -21,7 +21,7 @@ Policy Tool -> Evidence Ledger -> Citation Judge -> Runtime Gate
 
 Evidence Ledger 是当前 Copilot 进程内、当前轮的临时内存。Runtime 在每轮开始时清空 Ledger；它不会作为持久 Session、长期证据库或跨进程恢复机制。
 
-本地审计只允许条款 ID、条款数量、分数范围、verdict 状态、引用条款 ID 与失败类别。不得在终端、报告、文档、审计或 Git 中保存 API Key、草稿全文、原始模型响应或审计正文。
+本地审计只允许条款 ID、条款数量、分数范围、verdict 状态、引用条款 ID 与失败类别。正常 Copilot CLI 的 JSON 输出可包含客服草稿，且不改变这一既有契约。只有受控真实 smoke 的持久记录、报告和受控摘要不得保存或打印 API Key、草稿全文、原始模型响应或审计正文。
 
 离线评测与真实 smoke 是不同的验证层：前者使用合成中文宠物险 fixture，覆盖 `supported`、`incomplete`、`wrong_clause`、`no_evidence` 四类，不发起网络请求；后者仅在本地配置和网络可用时受控执行。
 
@@ -35,7 +35,13 @@ PYTHONPATH=src .venv/bin/python -m claimguard.cli examples/conversations/claim-a
 
 ## 受控真实 smoke
 
-真实 smoke 需要本地被忽略的 `.env` 或显式 `DASHSCOPE_API_KEY`，并会访问 Model Studio。运行时不得将 Copilot JSON 原样显示、保存到版本库或附入报告；仅可保留退出码、`current_agent`、verdict 状态、引用条款 ID 和是否转人工。若本地配置、Key 或网络不可用，应记录“安全跳过”，而不是尝试读取或打印 `.env` 内容。
+真实 smoke 需要本地被忽略的 `.env` 或显式 `DASHSCOPE_API_KEY`，并会访问 Model Studio。正常 CLI 的 JSON 输出可能包含草稿，因此采集流程必须受控且不改变 CLI：
+
+1. 在工作树外创建临时目录，将 CLI 的标准输出、标准错误和 `--audit` 文件都定向到该目录，绝不把原文显示到终端或写入版本库。
+2. 采集器仅在内存中读取临时 JSON 与审计记录，只提取退出码、`current_agent`、verdict 状态、引用条款 ID 和是否转人工。
+3. 持久报告只写入这五类受控字段；删除临时目录，不保存草稿全文、原始响应、审计正文或任何凭据。
+
+若本地配置、Key 或网络不可用，应记录“安全跳过”，而不是尝试读取或打印 `.env` 内容。
 
 ## 当前边界与下一项
 

@@ -26,7 +26,9 @@ Citation Judge 使用严格 JSON Schema 返回 `supported`、`unsupported` 或 `
 
 ## 审计与安全边界
 
-本地结构化审计只保存受控元数据。Policy 搜索记录条款 ID、数量和重排分数范围；引用门槛记录 verdict 状态、引用条款 ID 和失败类别。审计、报告、文档与命令输出流程不得保存 API Key、草稿全文、原始服务响应或审计正文。
+本地结构化审计只保存受控元数据。Policy 搜索记录条款 ID、数量和重排分数范围；引用门槛记录 verdict 状态、引用条款 ID 和失败类别。正常 Copilot CLI 会按既有契约输出包含 `draft` 的 JSON。受控真实 smoke 必须将该原始输出和审计文件限制在工作树外的临时目录；其持久记录、报告和受控摘要不得保存或打印 API Key、草稿全文、原始响应或审计正文。
+
+受控 smoke 的采集器只在内存中读取临时输出，提取退出码、`current_agent`、verdict 状态、引用条款 ID 与是否转人工；输出这些字段后立即删除临时目录。该采集步骤不改变 CLI 的标准输出契约。
 
 `DASHSCOPE_API_KEY` 仅来自被忽略的本地 `.env` 或显式进程环境变量。OpenAI 托管 tracing 默认关闭。`InMemorySessionStore` 仅支持同一进程内的恢复；持久 Session 未实现。
 

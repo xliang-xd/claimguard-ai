@@ -35,7 +35,7 @@ Policy Tool 先检索本地知识索引中的候选条款，再以 Qwen Rerankin
 
 API Key 仅从被忽略的本地 `.env` 或显式进程环境变量读取。OpenAI 托管 tracing 默认关闭。Ledger 不是持久存储，`InMemorySessionStore` 也只支持同一进程内恢复。
 
-审计只保存条款 ID、数量、分数范围、verdict 状态、引用条款 ID 与失败类别等受控元数据。API Key、草稿全文、原始服务响应和审计正文不得进入终端记录、文档、报告或 Git。
+审计只保存条款 ID、数量、分数范围、verdict 状态、引用条款 ID 与失败类别等受控元数据。正常 Copilot CLI 的 JSON 输出可包含客服草稿；这是既有 CLI 契约。只有受控真实 smoke 的持久记录、报告和受控摘要不得保存或打印草稿全文、原始响应、审计正文或 API Key。
 
 ## 快速开始
 
@@ -51,7 +51,7 @@ PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dis
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Reranking、Citation Judge 和 Copilot 的真实 smoke 需要本地 Model Studio 配置。它与离线评测分开执行，且输出必须受控：只允许记录退出码、`current_agent`、verdict 状态、引用条款 ID 与是否转人工。缺少 `.env` 或 `DASHSCOPE_API_KEY` 时安全跳过，不读取或打印 `.env` 内容。
+Reranking、Citation Judge 和 Copilot 的真实 smoke 需要本地 Model Studio 配置。它与离线评测分开执行。受控采集时，先将正常 CLI JSON 输出和审计文件写入工作树外的临时目录，不显示其原文；采集程序仅在内存中提取退出码、`current_agent`、verdict 状态、引用条款 ID 和是否转人工，生成受控摘要后删除临时文件。缺少 `.env` 或 `DASHSCOPE_API_KEY` 时安全跳过，不读取或打印 `.env` 内容。
 
 ## 文档
 
