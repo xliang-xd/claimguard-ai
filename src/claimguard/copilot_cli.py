@@ -16,6 +16,7 @@ from claimguard.agent_runtime.provider import AgentProviderError, QwenModelProvi
 from claimguard.agent_runtime.runtime import CopilotRuntime, CopilotTurnResult
 from claimguard.agent_runtime.settings import AgentSettingsError, load_agent_runtime_settings
 from claimguard.agent_runtime.state import CopilotContext, InMemorySessionStore
+from claimguard.citation_judge import CitationJudgeError, QwenCitationJudge
 from claimguard.embeddings import DashScopeEmbeddingClient, EmbeddingError
 from claimguard.knowledge import KnowledgeError, load_knowledge_index
 from claimguard.reranking import QwenReranker, RerankingError
@@ -56,6 +57,7 @@ async def execute_turn(args: argparse.Namespace) -> CopilotTurnResult:
         agents=agents,
         run_config=run_config,
         session_store=InMemorySessionStore(),
+        citation_judge=QwenCitationJudge(),
     )
     return await runtime.run_turn(context, args.message)
 
@@ -76,6 +78,7 @@ def main(
         EmbeddingError,
         KnowledgeError,
         RerankingError,
+        CitationJudgeError,
         OSError,
     ):
         print("Copilot request failed", file=sys.stderr)

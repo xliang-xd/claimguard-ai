@@ -1,0 +1,61 @@
+{
+  "language": "zh-CN",
+  "cases": [
+    {
+      "category": "supported",
+      "draft": "根据宠物安护医疗险等待期条款，保单生效后 30 日内为等待期。",
+      "evidence": [
+        {
+          "clause_id": "PET-WAIT-30",
+          "title": "等待期",
+          "content": "本合同生效后 30 日内为等待期。"
+        }
+      ],
+      "expected": {
+        "status": "supported",
+        "citations": [
+          "PET-WAIT-30"
+        ]
+      }
+    },
+    {
+      "category": "incomplete",
+      "draft": "宠物住院医疗费用都可以按 90% 比例赔付。",
+      "evidence": [
+        {
+          "clause_id": "PET-INPATIENT-90",
+          "title": "住院医疗赔付比例",
+          "content": "住院医疗费用在扣除免赔额后，按 90% 比例赔付。"
+        }
+      ],
+      "expected": {
+        "status": "insufficient_evidence",
+        "citations": []
+      }
+    },
+    {
+      "category": "wrong_clause",
+      "draft": "宠物疫苗接种费用可以获得赔付。",
+      "evidence": [
+        {
+          "clause_id": "PET-INPATIENT-90",
+          "title": "住院医疗赔付比例",
+          "content": "住院医疗费用在扣除免赔额后，按 90% 比例赔付。"
+        }
+      ],
+      "expected": {
+        "status": "unsupported",
+        "citations": []
+      }
+    },
+    {
+      "category": "no_evidence",
+      "draft": "宠物绝育手术费用可以获得赔付。",
+      "evidence": [],
+      "expected": {
+        "status": "insufficient_evidence",
+        "citations": []
+      }
+    }
+  ]
+}

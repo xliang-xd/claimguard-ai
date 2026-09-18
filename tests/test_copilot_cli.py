@@ -1,3 +1,5 @@
+import argparse
+import asyncio
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 import json
@@ -6,16 +8,84 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import AsyncMock, Mock, patch
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from claimguard.agent_runtime.runtime import CopilotTurnResult
+from claimguard.agent_runtime.state import InMemorySessionStore
+from claimguard.citation_judge import CitationJudgeError
 from claimguard.agent_runtime.settings import AgentSettingsError
-from claimguard.copilot_cli import main
+from claimguard.copilot_cli import execute_turn, main
 
 
 class CopilotCLITest(unittest.TestCase):
+    def test_execute_turn_injects_citation_dependencies_without_network(self):
+        args = argparse.Namespace(
+            tenant_id="demo-tenant",
+            user_id="agent-7",
+            session_id="demo-session",
+            index="policy.json",
+            audit="audit.jsonl",
+            message="等待期是什么？",
+        )
+        runtime = Mock()
+        runtime.run_turn = AsyncMock(
+            return_value=CopilotTurnResult(
+                status="human_takeover",
+                session_id="demo-session",
+                current_agent="Policy Agent",
+                draft="",
+                audit_id="audit-000001",
+            )
+        )
+
+        with (
+            patch("claimguard.copilot_cli.load_agent_runtime_settings") as load_settings,
+            patch("claimguard.copilot_cli.QwenModelProvider") as provider,
+            patch("claimguard.copilot_cli.build_run_config") as build_config,
+            patch("claimguard.copilot_cli.load_knowledge_index") as load_index,
+            patch("claimguard.copilot_cli.DashScopeEmbeddingClient") as embedding_client,
+            patch("claimguard.copilot_cli.JsonlAuditSink") as audit_sink,
+            patch("claimguard.copilot_cli.QwenReranker") as qwen_reranker,
+            patch("claimguard.copilot_cli.EvidenceLedger") as evidence_ledger,
+            patch("claimguard.copilot_cli.QwenCitationJudge", create=True) as qwen_judge,
+            patch("claimguard.copilot_cli.build_search_policy_tool") as policy_tool,
+            patch("claimguard.copilot_cli.build_copilot_agents") as build_agents,
+            patch("claimguard.copilot_cli.CopilotRuntime", return_value=runtime) as copilot_runtime,
+            patch("urllib.request.urlopen", side_effect=AssertionError("network access")),
+        ):
+            result = asyncio.run(execute_turn(args))
+
+        self.assertEqual(result.status, "human_takeover")
+        qwen_reranker.assert_called_once_with()
+        evidence_ledger.assert_called_once_with()
+        qwen_judge.assert_called_once_with()
+        runtime.run_turn.assert_awaited_once()
+        context, message = runtime.run_turn.await_args.args
+        self.assertIs(context.reranker, qwen_reranker.return_value)
+        self.assertIs(context.evidence_ledger, evidence_ledger.return_value)
+        self.assertEqual(message, "等待期是什么？")
+        self.assertEqual(
+            copilot_runtime.call_args.kwargs["citation_judge"],
+            qwen_judge.return_value,
+        )
+        self.assertIs(copilot_runtime.call_args.kwargs["agents"], build_agents.return_value)
+        self.assertIs(
+            copilot_runtime.call_args.kwargs["run_config"], build_config.return_value
+        )
+        self.assertIsInstance(
+            copilot_runtime.call_args.kwargs["session_store"], InMemorySessionStore
+        )
+        load_settings.assert_called_once_with()
+        provider.assert_called_once_with(load_settings.return_value)
+        policy_tool.assert_called_once_with()
+        build_agents.assert_called_once_with(load_settings.return_value, policy_tool.return_value)
+        load_index.assert_called_once_with("policy.json")
+        embedding_client.assert_called_once_with()
+        audit_sink.assert_called_once_with(Path("audit.jsonl"))
+
     def test_emits_structured_draft_result(self):
         observed_audits: list[str] = []
 
@@ -128,6 +198,36 @@ class CopilotCLITest(unittest.TestCase):
                     ],
                     turn_executor=execute_turn,
                 )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stderr.getvalue(), "Copilot request failed\n")
+
+    def test_citation_judge_setup_error_is_generic_and_does_not_disclose_details(self):
+        async def execute_turn(_args):
+            raise CitationJudgeError("DASHSCOPE_API_KEY=test-key")
+
+        with TemporaryDirectory() as directory:
+            index_path = Path(directory) / "policy.json"
+            index_path.write_text("{}", encoding="utf-8")
+            stderr = StringIO()
+            with redirect_stderr(stderr):
+                try:
+                    code = main(
+                        [
+                            "--tenant-id",
+                            "demo-tenant",
+                            "--user-id",
+                            "agent-7",
+                            "--session-id",
+                            "demo-session",
+                            "--index",
+                            str(index_path),
+                            "等待期是什么？",
+                        ],
+                        turn_executor=execute_turn,
+                    )
+                except CitationJudgeError:
+                    code = "unhandled"
 
         self.assertEqual(code, 2)
         self.assertEqual(stderr.getvalue(), "Copilot request failed\n")
