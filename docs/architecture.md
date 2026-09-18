@@ -1,70 +1,42 @@
 # 架构
 
-ClaimGuard AI 当前对外运行能力包括 v0.4 QA 和 v0.5.0 的最小 Copilot。确定性规则始终执行；RAG 依据检索和语义判断是添加到同一份稳定 QA 报告中的可选能力。Copilot 已启用固定的 `Router -> Policy Handoff`，不会改变 QA 报告契约。
+ClaimGuard AI `v0.6.0` 由独立的离线 QA 与受控客服 Copilot 组成。默认 QA CLI 不读取 Key、不发起网络请求；Copilot 使用 OpenAI Agents SDK for Python 和 Qwen Provider，但其草稿交付现在必须通过引用核验的运行时硬门槛。
 
-## 语义质检（当前）
+![ClaimGuard AI v0.6 架构图](assets/architecture.svg)
 
-对于一段已完成对话，`--llm` 会调用一次阿里云 Model Studio 的 Qwen `qwen3.7-plus`，使用严格 JSON Schema、`temperature: 0` 并关闭思考模式。它评估 `SEM-002` 至 `SEM-005`：回答相关性、服务态度不耐烦、投诉承认与安抚，以及无依据的确定性承诺。
+## 当前 Copilot 证据链
 
-只有当返回证据精确等于对话中的一整条客服消息时，报告构建器才会接受一项语义违规。对于已经由确定性匹配产生的规则，它会去重。服务商、传输或契约错误会终止命令，而不会加入未经验证的结论。
-
-未传入 `--llm` 时，语义客户端不会创建，普通 CLI 也不会产生语义网络请求。
-
-## 流程质检（后续）
-
-目标流程规则将结合确定性检查和 LLM 规范化处理。未来工作旨在接受更灵活的表达，同时继续执行身份披露、会话结束等必要服务步骤。
-
-## 知识依据质检（当前）
-
-知识依据规则会解析受支持的中文保单标题，使用 `qwen3.7-text-embedding` 构建并查询本地 JSON 索引，并将检索排名第一的条款附加到结论。已实现的规则是 `RAG-001` 至 `RAG-005`，覆盖免赔额、等待期、保障范围、意外定义和拒赔引用案例。报告将条款 ID、标题、文本、来源路径和检索得分作为补充证据输出。
-
-索引构建和查询期检索被有意分开：
+当前唯一的实时 Handoff 是 `Router -> Policy Agent`。Policy Agent 只能使用 Policy Tool；Router、Claims 或 Complaint 之间不存在其他可运行 Handoff。
 
 ```text
-显式索引命令
-  保单 Markdown -> 解析器 -> Qwen Embedding -> 被忽略的本地 JSON 索引
-
-带 --index 的 QA 命令
-  命中的 RAG 规则 -> 查询 Embedding -> 既有本地索引 -> 条款证据
+Policy Tool
+  -> 检索候选条款
+  -> Qwen Reranking
+  -> 选中条款写入 Evidence Ledger
+  -> Citation Judge
+  -> Runtime Gate
+  -> supported 时才交付草稿并保存本进程会话状态
 ```
 
-本地索引是位于 `.claimguard/` 下、供操作者使用且被忽略的产物。Embedding 客户端只在创建索引和有依据检索时创建；旧版 QA CLI 仍然完全离线，也不需要 Key。
+Policy Tool 先从本地知识索引召回候选条款，再调用默认 `qwen3-rerank` 重排。仅达到最小重排分数的选中条款会作为 `EvidenceRecord` 写入 Ledger；记录包含条款 ID、标题、来源、召回分数和重排分数。
 
-## Copilot 运行时（当前）
+`EvidenceLedger` 只在当前 Copilot 进程内存中存在。Runtime 在每一轮启动时清空它，因而上一轮证据不能用于当前轮引用核验，也不会被作为持久化存储或跨进程 Session 使用。
 
-Copilot 采用 OpenAI Agents SDK for Python。v0.5.0 已启用 Agents SDK Runner、Qwen Provider、Router、Policy Agent 和 Policy Tool；模型服务通过独立 Qwen Provider 接入中国大陆地域的 Model Studio。所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。
+Citation Judge 使用严格 JSON Schema 返回 `supported`、`unsupported` 或 `insufficient_evidence`。`supported` 必须引用本轮 Ledger 内至少一个条款 ID；其他状态不得含引用。Runtime 会再次校验状态与原因代码的配对、引用形状和 Ledger 成员资格。仅通过全部检查的 `supported` 结果才会写入完成审计、保存会话状态并交付 `draft_ready`；其余路径一律返回空草稿的 `human_takeover`。
 
-```text
-Web / CLI
-  -> Agents SDK Runner
-     -> Qwen Provider
-     -> Router
-        -> Policy Agent
-           -> Policy Tool（检索条款）
-```
+## 审计与安全边界
 
-第一版按单组织内部系统运行；每个运行上下文必须保留 `tenant_id`、`user_id` 和 `session_id`。应用通过 `InMemorySessionStore` 保存同一进程内的多轮状态；持久 Session 与跨进程恢复仍未实现。默认 JSONL 审计路径是 `.claimguard/audit.jsonl`。
+本地结构化审计只保存受控元数据。Policy 搜索记录条款 ID、数量和重排分数范围；引用门槛记录 verdict 状态、引用条款 ID 和失败类别。审计、报告、文档与命令输出流程不得保存 API Key、草稿全文、原始服务响应或审计正文。
 
-SessionStore 的 `exclusive_session` 是可选能力。只提供 `load` 和 `save` 的旧 Store 仍可运行，Runtime 会在当前实例和当前事件循环内按会话串行化；该兼容回退不能协调多个 Runtime 实例或事件循环共享同一 Store 的 `load-run-save` 操作。需要这一并发保证的 Store 必须实现 `exclusive_session`。
+`DASHSCOPE_API_KEY` 仅来自被忽略的本地 `.env` 或显式进程环境变量。OpenAI 托管 tracing 默认关闭。`InMemorySessionStore` 仅支持同一进程内的恢复；持久 Session 未实现。
 
-OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。审计事件拒绝原始客户消息和凭据字段。API Key 只从被忽略的 `.env` 或进程环境读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入 fixture 或 Git；Agent 不直接持有 API Key、数据库连接或其他基础设施凭据。
+## 独立 QA 路径
+
+已完成对话的 QA 保持独立：确定性规则始终执行，RAG 检索和 `--llm` 语义质检均为可选能力。它们不进入实时 Copilot Handoff，也不绕过 Citation Judge 的 Runtime Gate。
 
 ## 版本边界
 
-- `v0.5.0`：已启用 Agents SDK Runner、Qwen Provider、`Router -> Policy Handoff`、Policy Tool、进程内 Session 和本地审计。
-- Claims、Complaint、Compliance Guard 的完整能力、Citation Judge、Reranking、持久化 Session、审批、副作用工具和 Web/API 工作台继续后移。
+- `v0.6.0`：已实现 Reranking、内存 Evidence Ledger、严格 Citation Judge，以及 fail-closed 的 Runtime Gate。
+- `v0.7.0`：下一项后续里程碑；当前版本不交付 Claims、Complaint、持久 Session、审批、副作用工具或 Web/API。
 
-现有 QA CLI 暂不迁移到 Agents SDK。检索证据只用于定位选中的条款，不构成引用准确性判断。
-
-## 规划目录
-
-```text
-data/knowledge/              保单文本与条款 fixture
-examples/conversations/      用于演示和测试的示例对话
-src/claimguard/              应用软件包
-tests/                       自动化检查
-```
-
-v0.3 操作说明见 `docs/m3-rag-grounding.md`，v0.4 语义操作契约见 `docs/m4-semantic-qa.md`，v0.5 Copilot 操作说明见 `docs/m5-agents-sdk-foundation.md`。
-
-维护中的 Agent 拓扑、国产模型默认配置和更新策略见 `docs/agent-orchestration.md`。
+完整操作与验证契约见 [M6 文档](m6-reranking-citation-judge.md)。

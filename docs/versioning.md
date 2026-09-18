@@ -1,6 +1,6 @@
 # 版本管理策略
 
-ClaimGuard AI 使用 `vX.Y.Z` 形式的 Git 发布标签。
+ClaimGuard AI 使用 `vX.Y.Z` 形式的 Git 发布标签，Python 包元数据遵循不带前导 `v` 的 PEP 440 格式。
 
 ## 升级规则
 
@@ -10,21 +10,13 @@ ClaimGuard AI 使用 `vX.Y.Z` 形式的 Git 发布标签。
 
 ## 当前解释
 
-- M1 QA CLI 是功能里程碑，因此采用 `v0.1.0`。
-- M2 确定性规则运行器是较大的能力升级，因此合并时升级为 `v0.2.0`。
-- README 架构图和路线图属于文档改进，因此采用 `v0.2.1`。
-- Agent 编排文档属于文档改进，因此采用 `v0.2.2`。
-- M3 RAG 依据能力新增保单索引、Embedding 检索、有依据的 QA 证据和面向用户的 CLI 命令，因此是 `v0.3.0` 功能里程碑。
-- 被忽略的本地 `.env` 配置回退是范围较小的操作者配置改进，因此为 `v0.3.1`。
-- M4 语义质检新增可选的结构化模型工作流、四条生效的语义规则、经过验证的引文证据和一个面向用户的 CLI 标志，因此是 `v0.4.0` 功能里程碑。
-- `v0.4.1` 是说明性文档和技术图的中文本地化补丁，不改变已交付功能的范围。
-- `v0.4.2` 是 OpenAI Agents SDK Copilot 架构文档检查点；它记录 Router Handoff、Qwen Provider、本地 Session 与审计设计。
-- `v0.5.0` 是 Agents SDK 运行时基础里程碑：启用 Qwen Provider、Agents SDK Runner、最小 `Router -> Policy Handoff`、Policy Tool、进程内 Session 和本地审计。
-- 后续仅包含补丁的跟进应使用 `v0.5.1`、`v0.5.2` 等版本。
+- `v0.5.0` 启用 Qwen Provider、Agents SDK Runner、最小 `Router -> Policy Handoff`、Policy Tool、进程内 Session 和本地审计。
+- `v0.6.0` 在该 Copilot 路径后新增 Qwen Reranking、每轮内存 Evidence Ledger、严格 Citation Judge 与 fail-closed Runtime Gate。只有 Ledger 中的条款 ID 支持且 verdict 为 `supported` 时，草稿才可交付和保存会话状态。
+- `v0.7.0` 为下一项后续里程碑。Claims、Complaint、持久 Session、审批、副作用工具和 Web/API 没有包含在 `v0.6.0` 内。
 
 ## 实务规则
 
-- 从 Agents SDK 运行配置基础开始，Python 最低运行版本由 3.9 提升为 3.10，以满足 `openai-agents>=0.14,<0.15` 的兼容性要求；现有 QA CLI 行为不变。
-- Python 软件包元数据采用不带前导 `v` 的 PEP 440 版本，例如 `0.3.0`。
-- Git 标签和 GitHub 发布名称采用带前导 `v` 的版本，例如 `v0.3.0`。
-- 在 ClaimGuard 具备可用的端到端演示、文档化的设置步骤、示例数据、测试和清晰用户工作流之前，不创建 `v1.0.0` 发布。
+- Python 最低运行版本为 3.10，以满足 `openai-agents>=0.14,<0.15`。
+- Git 标签和 GitHub 发布名称采用带前导 `v` 的版本，例如 `v0.6.0`。
+- API Key、草稿、原始响应与审计正文不得进入标签说明、提交、发布文档或报告。
+- 在具备可用的端到端演示、文档化设置步骤、示例数据、测试和清晰用户工作流之前，不创建 `v1.0.0` 发布。

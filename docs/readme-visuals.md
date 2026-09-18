@@ -1,31 +1,23 @@
 # README 图示
 
-本文档记录截至 `v0.5.0` 更新的技术图。v0.5.0 保留独立的 v0.4 QA，并将最小 Agents SDK Copilot 运行路径标记为当前能力。
+本文档记录 `v0.6.0` 的发布图。三张图均采用 Fireworks Tech Graph 的 Style 1 Flat Icon 参考、白色画布与清晰的当前/后续边界。
 
 ## 资源
 
-- `docs/assets/architecture.svg`：保留索引构建与当前 QA 路径，并展示已启用的 `Copilot CLI -> Agents SDK Runner -> Qwen Provider`、`Router -> Policy`、Policy Tool 以及本地 Session / Audit 边界。
-- `docs/assets/architecture.png`：用于视觉检查的渲染预览。
-- `docs/assets/roadmap.svg`：从已交付的 `v0.5.0` Agents SDK 基础到 `v1.0.0` 企业级演示的版本路线图，`v0.6.0` Reranking + Citation Judge 标记为下一项。
-- `docs/assets/roadmap.png`：用于视觉检查的渲染预览。
-- `docs/assets/agent-orchestration.svg`：展示 `Router -> Policy / Claims / Complaint Handoff`、横跨所有 Copilot Agent 的 Compliance Guard，以及独立的 QA Agent。
-- `docs/assets/agent-orchestration.png`：用于视觉检查的渲染预览。
+- `docs/assets/architecture.svg`：当前 Copilot 的 `Policy Tool -> Evidence Ledger -> Citation Judge -> Runtime Gate` 证据链，和独立 QA 路径。
+- `docs/assets/architecture.png`：架构图的本地 CairoSVG 预览。
+- `docs/assets/agent-orchestration.svg`：固定 `Router -> Policy Agent` 与其后的证据链；不绘制尚未实现的 Handoff。
+- `docs/assets/agent-orchestration.png`：编排图的本地 CairoSVG 预览。
+- `docs/assets/roadmap.svg`：`v0.6.0` 标为当前，`v0.7.0` 标为下一项，并单独说明后续范围。
+- `docs/assets/roadmap.png`：路线图的本地 CairoSVG 预览。
 
-## 当前进度标记
+## 表达约束
 
-- 架构图将独立 QA 与已启用的最小 Agents SDK 路径分开；Runner、Qwen Provider、Policy Tool 和本地 Session / Audit 均标记为已实现。
-- 路线图将 `v0.5.0` Agents SDK 基础标为当前，将 `v0.6.0` Reranking + Citation Judge 标为下一项，后续依次为 `v0.7.0` 至 `v1.0.0`。
-- Agent 编排图将 `Router -> Policy Handoff` 标为已实现；Claims、Complaint、完整 Compliance Guard 和 QA Citation Judge 保持后续状态，QA Agent 保持独立。
-- 所有图中的解释性标签均使用中文；Agent、Reranking、Web、API、模型名称和命令参数保持技术原文。
+- 绿色实线和实心状态表示当前已实现路径；灰色虚线分区只表示后续边界。
+- Evidence Ledger 必须标为“当前进程、当前轮、内存”；它不是持久存储。
+- Runtime Gate 只允许 `supported` 进入交付路径；其余 verdict 进入 `human_takeover`。
+- 图中不得将 Claims、Complaint、持久 Session、审批、副作用工具或 Web/API 画为节点、接口或可用路径。
 
 ## 验证
 
-图示使用 `fireworks-tech-graph` skill 生成，并通过以下命令验证：
-
-```bash
-PYTHONPATH=/tmp/claimguard-cairosvg sh /Users/lxd/.codex/skills/fireworks-tech-graph/scripts/validate-svg.sh docs/assets/architecture.svg
-PYTHONPATH=/tmp/claimguard-cairosvg sh /Users/lxd/.codex/skills/fireworks-tech-graph/scripts/validate-svg.sh docs/assets/roadmap.svg
-PYTHONPATH=/tmp/claimguard-cairosvg sh /Users/lxd/.codex/skills/fireworks-tech-graph/scripts/validate-svg.sh docs/assets/agent-orchestration.svg
-```
-
-所有 SVG 均通过 XML、标记、碰撞、语义几何、构图和渲染验证。导出的 PNG 已进行视觉检查，以确认没有裁切、文字重叠或可读性问题。
+每次更新图示均执行 SVG 的 XML、marker、箭头碰撞、语义几何、构图与渲染验证，并通过本地 CairoSVG 导出 PNG。导出后必须视觉检查文字、箭头、分区与图例，确认无裁切或重叠。

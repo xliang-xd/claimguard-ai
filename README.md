@@ -1,185 +1,67 @@
 # ClaimGuard AI
 
-面向保险文字客服的 Copilot 与 AI 智能质检系统。
+面向保险文字客服的 Copilot 与 AI 智能质检系统。ClaimGuard AI 是聚焦保险文字服务的 GitHub 演示项目，不处理电话、ASR、说话人分离、OCR、视频或智能外呼。
 
-ClaimGuard AI 是一个聚焦于保险文字服务的 GitHub 演示项目。不处理电话、ASR、说话人分离、OCR、视频或智能外呼。V1 只关注两类输入：
+## 当前版本
 
-1. 正由在线客服处理的客户消息。
-2. 需要接受质检的已完成文字对话。
+当前软件包版本为 `0.6.0`。它保留独立、默认离线的 QA CLI，并将最小 Copilot 的条款检索升级为可核验的交付路径：
 
-## 架构
+```text
+Policy Tool -> Evidence Ledger -> Citation Judge -> Runtime Gate
+```
 
-![ClaimGuard AI 架构图](docs/assets/architecture.svg)
+![ClaimGuard AI v0.6 架构图](docs/assets/architecture.svg)
 
-当前对外运行能力包括 v0.4 QA 和 v0.5.0 的最小 Copilot：确定性 QA、可选的 RAG 依据检索、面向已完成中文对话的可选语义质检，以及固定的 `Router -> Policy Handoff`。只有当操作者显式传入 `--llm` 时，QA 语义裁判才会执行一次；旧 QA CLI 默认保持离线，QA 报告契约不变。
+Policy Tool 先检索本地知识索引中的候选条款，再以 Qwen Reranking 选择可用证据。选中条款写入当前进程、当前轮的内存 Evidence Ledger。Citation Judge 以严格 Schema 判定草稿是否受这些证据支持；Runtime Gate 会再次校验 verdict 和条款 ID，只有 `supported` 才会交付草稿并保存本进程会话状态。其他情况均 fail closed 为 `human_takeover`。
+
+当前唯一的实时 Handoff 是 `Router -> Policy Agent`。Claims、Complaint、持久 Session、审批、副作用工具和 Web/API 均未实现，也不属于当前运行路径。
 
 ## V1 产品
 
 ### 客服 Copilot
 
-Copilot 工作流在实时聊天中帮助客服回复客户。
-
-- 识别客户意图，例如赔付金额异议、拒赔说明、保单条款查询或投诉。
-- 检索相关保险知识。
-- 起草清晰、合规且有条款依据的回复。
-- 提醒客服避免高风险措辞、无依据承诺和不耐烦表达。
+- 识别保单、保障责任、等待期和免责等条款解释意图。
+- 检索并重排相关保险条款。
+- 仅在当前 Evidence Ledger 支持引用时交付草稿。
+- 在证据不足、引用不支持或运行时核验失败时转人工。
 
 ### 智能质检
 
-QA 工作流审查已完成对话。
+- 审查已完成文字对话并生成稳定 JSON 报告。
+- 运行确定性规则、可选 RAG 依据检索与可选语义质检。
+- 保持默认离线行为；只有显式使用需要模型的能力时才会发起网络请求。
 
-- 生成质检得分。
-- 运行语义、流程和知识依据规则。
-- 展示违规规则 ID、风险等级、证据和判定理由。
-- 提供有正确保单条款依据的改进回复建议。
+## 安全与数据边界
 
-## V1 目标规则矩阵
+API Key 仅从被忽略的本地 `.env` 或显式进程环境变量读取。OpenAI 托管 tracing 默认关闭。Ledger 不是持久存储，`InMemorySessionStore` 也只支持同一进程内恢复。
 
-当操作者显式传入 `--llm` 时，`SEM-002` 至 `SEM-005` 生效。确定性规则运行器和 RAG 依据检索无需语义模型调用即可使用。`SEM-001`、流程规范化和引用判断仍处于延后状态。
-
-| 规则 ID | 规则 | 类别 | 风险 | 检测方式 |
-| --- | --- | --- | --- | --- |
-| SEM-001 | 反诘客户 | 语义 | 极高 | LLM Judge（后续） |
-| SEM-002 | 回答未覆盖客户意图 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
-| SEM-003 | 服务态度不耐烦 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
-| SEM-004 | 投诉未被承认或安抚 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
-| SEM-005 | 未获批准的承诺 | 语义 | 极高 | Qwen 语义裁判（`--llm`） |
-| PROC-001 | 身份披露不完整 | 流程 | 高 | 规则 + LLM（后续） |
-| PROC-002 | 缺少结束语 | 流程 | 低 | 规则 + LLM（后续） |
-| RAG-001 | 赔付金额异议：免赔额 | 知识依据 | 中 | 确定性 RAG 证据 |
-| RAG-002 | 投保前或等待期内就诊拒赔 | 知识依据 | 中 | 确定性 RAG 证据 |
-| RAG-003 | 疾病不在保单保障范围内 | 知识依据 | 中 | 确定性 RAG 证据 |
-| RAG-004 | 意外定义说明 | 知识依据 | 中 | 确定性 RAG 证据 |
-| RAG-005 | 宠物险拒赔的动态条款引用 | 知识依据 | 高 | 意图 + RAG 证据 + Citation Judge（后续） |
-
-`RAG-005` 是 V1 的重点演示案例，因为它计划在一个场景中展现意图路由、检索、引用准确性和有依据的回答质量。v0.4 仅附加检索到的条款证据；引用准确性仍需要未来的 Citation Judge。
-
-## Copilot 技术方向
-
-Copilot 使用 OpenAI Agents SDK for Python。v0.5.0 仅启用固定的 `Router -> Policy Handoff`：
-
-```text
-Router
-  -> Policy Agent
-```
-
-所有推理、Embedding 和 Reranking 模型仍默认使用 Qwen。OpenAI 托管 tracing 默认关闭；本地结构化审计始终开启，并作为正式路径。QA Agent 保持独立，继续审查已完成对话。Claims、Complaint、审批和副作用工具以及 Web/API 工作台继续按路线图后移。
-
-## 当前里程碑
-
-当前软件包版本：`0.5.0`。
-
-M2 引入首个确定性规则运行器。QA 结论现在来自对话文本，而非 fixture 中的 `expected_risks` 字段。在 LLM 行为仍处于开发阶段时，该字段继续作为测试预期数据。
-
-`v0.2.1` 是文档补丁，新增 README 架构图和路线图。
-
-`v0.2.2` 是文档补丁，记录维护中的 Agent 编排和国产模型默认配置，详见 `docs/agent-orchestration.md`。
-
-`v0.3.0` 新增确定性的中文保单依据能力：保单解析器和已验证的本地索引、Qwen `qwen3.7-text-embedding` 检索、五条受支持的 RAG 规则、QA 结论中的检索证据，以及兼容旧用法的索引创建与依据质检 CLI 命令。它不包含 LLM Judge、Reranking 或引用准确性判断。
-
-`v0.3.1` 新增被 Git 忽略的项目本地 `.env` 配置回退。显式设置的进程环境变量仍具有更高优先级。
-
-`v0.4.0` 为 `SEM-002` 至 `SEM-005` 新增可选的语义质检。使用 `--llm` 时，一次 Qwen `qwen3.7-plus` 结构化输出请求会评估一段已完成对话。只有当语义结论的证据精确等于该对话中的一整条客服消息时，系统才会输出该结论；服务商或契约错误会返回失败，而不是产生未经验证的结论。
-
-`v0.4.1` 将解释性文档和技术图本地化为中文，不改变已交付功能范围。
-
-`v0.4.2` 冻结 OpenAI Agents SDK Copilot 架构：固定 Router 与 Policy、Claims、Complaint 的 Handoff 边界，保留 Qwen 默认模型、本地 Session 与本地审计，并明确 OpenAI 托管 tracing 默认关闭。
-
-`v0.5.0` 新增可运行的 Agents SDK 基础：Qwen Provider、Agents SDK Runner、`Router -> Policy Handoff`、仅检索条款的 Policy Tool、进程内 Session 恢复和本地 JSONL 审计。Policy Agent 当前通过其指令和配置的 Policy Tool，以检索到的条款起草以“客服草稿：”标记的回复；这不是 Runtime 强制的不变量。Runtime 对工具调用及草稿与工具证据绑定的验证留待后续里程碑。Claims、Complaint、审批和副作用工具仍未启用。完整操作步骤见 `docs/m5-agents-sdk-foundation.md`。
-
-## 仓库结构
-
-```text
-docs/                       产品范围与架构说明
-data/knowledge/             合成保单 fixture
-examples/conversations/     演示对话 fixture
-src/claimguard/             Python 软件包
-tests/                      自动化测试
-```
-
-## 版本管理
-
-发布标签采用 `vX.Y.Z` 格式。
-
-- 小型改动使用 `v0.0.Z` 形式的补丁版本。
-- 较大的功能里程碑使用 `v0.Y.0` 形式的次版本。
-- `vX.0.0` 主版本只留给真正可交付的演示里程碑。
-
-项目具体规则见 `docs/versioning.md`。
+审计只保存条款 ID、数量、分数范围、verdict 状态、引用条款 ID 与失败类别等受控元数据。API Key、草稿全文、原始服务响应和审计正文不得进入终端记录、文档、报告或 Git。
 
 ## 快速开始
 
-项目最低运行版本已从 Python 3.9 提升到 Python 3.10，以满足 `openai-agents>=0.14,<0.15` 的运行要求。现有 QA CLI 的默认离线行为和报告契约保持不变。
-
-运行当前 QA CLI 演示：
+项目要求 Python 3.10 或更高版本。运行默认离线的 QA 演示：
 
 ```bash
 PYTHONPATH=src python3 -m claimguard.cli examples/conversations/claim-amount-dispute.json
 ```
 
-为有依据的 QA 创建本地保单知识索引。先复制本地模板，再将 Model Studio API Key 写入 `.env`。该文件会被 Git 忽略：
+运行完整离线测试：
 
 ```bash
-cp .env.example .env
-# 仅在本地编辑 .env：DASHSCOPE_API_KEY=your-key
-PYTHONPATH=src python3 -m claimguard.cli index data/knowledge/petcare-plus-policy-zh.md \
-  --output .claimguard/petcare-plus-policy.json
+PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-使用生成的索引运行 QA：
+Reranking、Citation Judge 和 Copilot 的真实 smoke 需要本地 Model Studio 配置。它与离线评测分开执行，且输出必须受控：只允许记录退出码、`current_agent`、verdict 状态、引用条款 ID 与是否转人工。缺少 `.env` 或 `DASHSCOPE_API_KEY` 时安全跳过，不读取或打印 `.env` 内容。
 
-```bash
-PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-deductible-dispute.json \
-  --index .claimguard/petcare-plus-policy.json
-```
+## 文档
 
-生成的索引保存在 `.claimguard/petcare-plus-policy.json`。API Key 和生成的索引不会提交。当显式设置时，进程环境变量会覆盖 `.env` 中的同名值。
-
-支持的中文案例、索引生命周期、操作者命令和当前限制见 `docs/m3-rag-grounding.md`。
-
-使用现有本地 Qwen 配置创建索引后，可以运行一次受控 Copilot smoke。该命令会访问 Model Studio；索引和默认审计文件均位于被 Git 忽略的 `.claimguard/`。Copilot 的默认审计路径是 `.claimguard/audit.jsonl`，审计事件不记录原始客户消息或凭据。
-
-```bash
-PYTHONPATH=src python3 -m claimguard.copilot_cli \
-  --tenant-id demo-tenant --user-id agent-7 --session-id policy-demo-001 \
-  --index .claimguard/petcare-plus-policy.json \
-  "宠物投保后第二天就生病了，为什么不赔？"
-```
-
-`InMemorySessionStore` 只保证同一进程内的多轮恢复；持久 Session 会在后续里程碑实现。
-
-针对专用中文 fixture 运行语义质检：
-
-```bash
-PYTHONPATH=src python3 -m claimguard.cli examples/conversations/zh-semantic-qa.json --llm
-```
-
-这是一次明确会产生费用的 Model Studio 网络调用。API Key 只从被忽略的本地 `.env` 或显式进程环境变量读取，严禁进入异常或任何输出表面（包括标准输出、标准错误、日志、报告和审计），也不得写入命令、fixture 或 Git 提交及历史。语义裁判要求证据为一整条有来源的客服消息。如果请求或响应无法通过验证，命令会失败，且不会生成语义结论。运行契约和限制见 `docs/m4-semantic-qa.md`。
-
-命令返回 JSON QA 报告，其中包括：
-
-- `conversation_id`：被审查对话 fixture 的 ID。
-- `scenario`：演示案例说明。
-- `score`：确定性的质检得分。
-- `findings`：包含规则 ID、类别、风险等级、证据和建议的规则结论。
-
-运行测试套件：
-
-```bash
-python3 -m unittest discover -s tests
-```
-
-加载 V1 规则目录：
-
-```python
-from claimguard.rules import load_rule_catalog
-
-catalog = load_rule_catalog()
-print(catalog.get("RAG-005").name)
-```
+- [架构](docs/architecture.md)：当前证据链、审计边界与版本范围。
+- [Agent 编排](docs/agent-orchestration.md)：固定 Handoff、Runtime Gate 与独立 QA。
+- [M6 操作与验证](docs/m6-reranking-citation-judge.md)：Reranking、Ledger、Judge、离线评测和受控 smoke。
+- [版本策略](docs/versioning.md)：`v0.6.0` 与下一项 `v0.7.0` 的边界。
 
 ## 路线图
 
 ![ClaimGuard AI 路线图](docs/assets/roadmap.svg)
 
-路线图将小型文档或 fixture 更新放在补丁版本中，而将能力里程碑提升到次版本。
+`v0.6.0` 是当前已交付的引用核验里程碑；`v0.7.0` 是下一项后续里程碑。后续能力不会被画作或描述为当前可用接口。
