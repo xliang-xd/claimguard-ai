@@ -273,6 +273,102 @@ async def run_serialized_pair(
 
 
 class CopilotRuntimeTest(unittest.IsolatedAsyncioTestCase):
+    async def _assert_verdict_is_rejected(
+        self,
+        verdict,
+        *,
+        citation_status,
+        failure_category,
+    ):
+        store = InMemorySessionStore()
+        prior_state = ConversationState(
+            "tenant-a",
+            "session-1",
+            "agent-7",
+            "Policy Agent",
+            ({"role": "user", "content": "已有消息"},),
+        )
+        store.save(prior_state)
+        context = make_context()
+        result = await make_runtime(
+            ScriptedRunner(
+                last_agent_name="Policy Agent",
+                output=CopilotAgentOutput(status="draft_ready", draft="客服草稿：等待期说明"),
+            ),
+            store,
+            judge=StaticJudge(verdict),
+        ).run_turn(context, "等待期")
+
+        self.assertEqual((result.status, result.draft), ("human_takeover", ""))
+        self.assertEqual(store.load("tenant-a", "session-1"), prior_state)
+        self.assertEqual(context.audit_sink.events[-1].event_type, "citation_failed")
+        self.assertEqual(
+            context.audit_sink.events[-1].details,
+            {
+                "citation_status": citation_status,
+                "citation_ids": (),
+                "failure_category": failure_category,
+            },
+        )
+        self.assertNotIn("reason_code", context.audit_sink.events[-1].details)
+        self.assertNotIn("draft", context.audit_sink.events[-1].details)
+        self.assertNotIn("content", context.audit_sink.events[-1].details)
+
+    async def test_insufficient_evidence_verdict_does_not_save_or_deliver(self):
+        await self._assert_verdict_is_rejected(
+            CitationVerdict(
+                status="insufficient_evidence",
+                citations=(),
+                reason_code="insufficient_evidence",
+            ),
+            citation_status="insufficient_evidence",
+            failure_category="unsupported_verdict",
+        )
+
+    async def test_verdict_with_mismatched_status_and_reason_is_rejected(self):
+        await self._assert_verdict_is_rejected(
+            CitationVerdict(
+                status="supported",
+                citations=("18",),
+                reason_code="citation_unsupported",
+            ),
+            citation_status="not_judged",
+            failure_category="invalid_verdict",
+        )
+
+    async def test_verdict_with_non_string_reason_is_rejected(self):
+        await self._assert_verdict_is_rejected(
+            CitationVerdict(
+                status="supported",
+                citations=("18",),
+                reason_code=123,
+            ),
+            citation_status="not_judged",
+            failure_category="invalid_verdict",
+        )
+
+    async def test_verdict_with_illegal_reason_is_rejected(self):
+        await self._assert_verdict_is_rejected(
+            CitationVerdict(
+                status="supported",
+                citations=("18",),
+                reason_code="not-a-citation-reason",
+            ),
+            citation_status="not_judged",
+            failure_category="invalid_verdict",
+        )
+
+    async def test_supported_verdict_without_citations_is_rejected(self):
+        await self._assert_verdict_is_rejected(
+            CitationVerdict(
+                status="supported",
+                citations=(),
+                reason_code="citation_supported",
+            ),
+            citation_status="not_judged",
+            failure_category="invalid_verdict",
+        )
+
     async def test_runtime_package_exports_citation_judge_contract(self):
         from claimguard.agent_runtime import CitationJudge as PublicCitationJudge
         from claimguard.agent_runtime import CitationVerdict as PublicCitationVerdict
